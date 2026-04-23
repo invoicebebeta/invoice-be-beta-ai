@@ -13,6 +13,8 @@ export type LineItem = {
   description: string;
   price: number;
   quantity: number;
+  taxRate?: number;
+  discountPercent?: number;
 };
 
 export type InvoiceStatus = 'draft' | 'awaiting_deposit' | 'deposit_paid' | 'fully_paid';

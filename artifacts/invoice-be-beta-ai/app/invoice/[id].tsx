@@ -15,7 +15,13 @@ import { PrimaryButton } from "@/components/PrimaryButton";
 import { SecondaryButton } from "@/components/SecondaryButton";
 import { Invoice, InvoiceStatus } from "@/utils/types";
 import { simulatePayment } from "@/utils/mockPayment";
-import { formatMoney } from "@/utils/calculations";
+import {
+  calculateDiscountTotal,
+  calculateSubtotal,
+  calculateTaxTotal,
+  formatMoney,
+  lineTotal,
+} from "@/utils/calculations";
 import { generateShareLink } from "@/utils/mockLinks";
 
 const NEXT_ACTION: Record<InvoiceStatus, string> = {
@@ -222,9 +228,11 @@ export default function InvoiceDetailScreen() {
               {it.description ? <Text style={[styles.itemDesc, { color: colors.mutedForeground }]}>{it.description}</Text> : null}
               <Text style={[styles.itemMeta, { color: colors.mutedForeground }]}>
                 {it.quantity} × {formatMoney(it.price, invoice.currency)}
+                {(it.discountPercent ?? 0) > 0 ? `  ·  -${it.discountPercent}% off` : ""}
+                {(it.taxRate ?? 0) > 0 ? `  ·  +${it.taxRate}% tax` : ""}
               </Text>
             </View>
-            <Text style={[styles.itemTotal, { color: colors.foreground }]}>{formatMoney(it.price * it.quantity, invoice.currency)}</Text>
+            <Text style={[styles.itemTotal, { color: colors.foreground }]}>{formatMoney(lineTotal(it), invoice.currency)}</Text>
           </View>
         ))}
       </View>
@@ -232,15 +240,23 @@ export default function InvoiceDetailScreen() {
       <Text style={[styles.section, { color: colors.mutedForeground, marginTop: 20 }]}>Amount</Text>
       <AmountBreakdown
         currency={invoice.currency}
-        rows={[
-          { label: "Total", value: invoice.total, emphasis: !invoice.requireDeposit },
-          ...(invoice.requireDeposit
-            ? [
-                { label: "Deposit", value: invoice.depositAmount },
-                { label: "Remaining", value: invoice.remainingBalance, emphasis: true },
-              ]
-            : []),
-        ]}
+        rows={(() => {
+          const subtotal = calculateSubtotal(invoice.lineItems);
+          const discount = calculateDiscountTotal(invoice.lineItems);
+          const tax = calculateTaxTotal(invoice.lineItems);
+          const rows: { label: string; value: number; emphasis?: boolean }[] = [];
+          if (discount > 0 || tax > 0) {
+            rows.push({ label: "Subtotal", value: subtotal });
+            if (discount > 0) rows.push({ label: "Discount", value: -discount });
+            if (tax > 0) rows.push({ label: "Tax", value: tax });
+          }
+          rows.push({ label: "Total", value: invoice.total, emphasis: !invoice.requireDeposit });
+          if (invoice.requireDeposit) {
+            rows.push({ label: "Deposit", value: invoice.depositAmount });
+            rows.push({ label: "Remaining", value: invoice.remainingBalance, emphasis: true });
+          }
+          return rows;
+        })()}
       />
 
       {(invoice.depositLink || invoice.finalLink) && (

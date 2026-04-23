@@ -15,6 +15,8 @@ type Props = {
 export function LineItemEditor({ item, onChange, onRemove, canRemove }: Props) {
   const colors = useColors();
   const [generating, setGenerating] = useState(false);
+  const hasAdjustments = (item.taxRate ?? 0) > 0 || (item.discountPercent ?? 0) > 0;
+  const [showAdjustments, setShowAdjustments] = useState(hasAdjustments);
 
   const handleGenerate = async () => {
     if (!item.name.trim()) return;
@@ -32,6 +34,11 @@ export function LineItemEditor({ item, onChange, onRemove, canRemove }: Props) {
     backgroundColor: colors.background,
     borderColor: colors.border,
     borderRadius: colors.radius,
+  };
+
+  const setNumeric = (key: 'taxRate' | 'discountPercent', t: string) => {
+    const n = parseFloat(t.replace(/[^0-9.]/g, '')) || 0;
+    onChange({ ...item, [key]: Math.max(0, Math.min(100, n)) });
   };
 
   return (
@@ -109,6 +116,46 @@ export function LineItemEditor({ item, onChange, onRemove, canRemove }: Props) {
           />
         </View>
       </View>
+
+      <Pressable
+        onPress={() => setShowAdjustments((v) => !v)}
+        style={({ pressed }) => [styles.toggle, { opacity: pressed ? 0.7 : 1 }]}
+      >
+        <Feather name={showAdjustments ? 'chevron-up' : 'chevron-down'} size={14} color={colors.primary} />
+        <Text style={[styles.toggleText, { color: colors.primary }]}>
+          {showAdjustments ? 'Hide tax & discount' : 'Add tax or discount'}
+        </Text>
+        {!showAdjustments && hasAdjustments && (
+          <View style={[styles.dot, { backgroundColor: colors.primary }]} />
+        )}
+      </Pressable>
+
+      {showAdjustments && (
+        <View style={styles.row}>
+          <View style={{ flex: 1, marginRight: 8 }}>
+            <Text style={[styles.miniLabel, { color: colors.mutedForeground }]}>Discount %</Text>
+            <TextInput
+              placeholder="0"
+              placeholderTextColor={colors.mutedForeground}
+              keyboardType="decimal-pad"
+              value={item.discountPercent ? String(item.discountPercent) : ''}
+              onChangeText={(t) => setNumeric('discountPercent', t)}
+              style={[styles.input, inputStyle]}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.miniLabel, { color: colors.mutedForeground }]}>Tax %</Text>
+            <TextInput
+              placeholder="0"
+              placeholderTextColor={colors.mutedForeground}
+              keyboardType="decimal-pad"
+              value={item.taxRate ? String(item.taxRate) : ''}
+              onChangeText={(t) => setNumeric('taxRate', t)}
+              style={[styles.input, inputStyle]}
+            />
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -124,4 +171,7 @@ const styles = StyleSheet.create({
   aiText: { fontFamily: 'Inter_700Bold', fontSize: 12, marginLeft: 4 },
   row: { flexDirection: 'row' },
   miniLabel: { fontFamily: 'Inter_500Medium', fontSize: 11, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.3 },
+  toggle: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6, marginBottom: 4 },
+  toggleText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, marginLeft: 4 },
+  dot: { width: 6, height: 6, borderRadius: 3, marginLeft: 6 },
 });
