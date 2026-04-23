@@ -12,11 +12,12 @@ import { SecondaryButton } from "@/components/SecondaryButton";
 import { StarRating } from "@/components/StarRating";
 import { EmptyState } from "@/components/EmptyState";
 import { CurrencyPicker } from "@/components/CurrencyPicker";
+import { LogoPicker } from "@/components/LogoPicker";
 
 export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, signOut, updateBusinessName, updateCurrency } = useAuth();
+  const { user, signOut, updateBusinessName, updateCurrency, updateLogo } = useAuth();
   const { reviews, averageRating } = useReviews();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(user?.businessName ?? "");
@@ -67,6 +68,15 @@ export default function ProfileScreen() {
             </View>
             <StarRating value={averageRating} size={22} readOnly />
           </View>
+        </View>
+
+        <Text style={[styles.section, { color: colors.mutedForeground }]}>Branding</Text>
+        <View style={{ marginBottom: 24 }}>
+          <LogoPicker
+            logoUri={user?.logoUri}
+            businessName={user?.businessName ?? ""}
+            onChange={updateLogo}
+          />
         </View>
 
         <Text style={[styles.section, { color: colors.mutedForeground }]}>Currency</Text>

@@ -53,6 +53,7 @@ function AuthGate() {
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="invoice/[id]" options={{ title: "Invoice" }} />
+      <Stack.Screen name="customer/[email]" options={{ title: "Customer" }} />
       <Stack.Screen name="review/[id]" options={{ title: "Leave a review", presentation: "modal" }} />
     </Stack>
   );

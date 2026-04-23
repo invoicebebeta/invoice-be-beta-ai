@@ -1,11 +1,13 @@
 import React, { useState } from "react";
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import * as Clipboard from "expo-clipboard";
 
 import { useColors } from "@/hooks/useColors";
+import { useAuth } from "@/contexts/AuthContext";
 import { useInvoices } from "@/contexts/InvoicesContext";
 import { AmountBreakdown } from "@/components/AmountBreakdown";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -28,6 +30,7 @@ export default function InvoiceDetailScreen() {
   const router = useRouter();
   const colors = useColors();
   const { getInvoice, updateInvoice, duplicateInvoice, deleteInvoice } = useInvoices();
+  const { user } = useAuth();
   const invoice = getInvoice(String(id));
   const [pendingAction, setPendingAction] = useState<string | null>(null);
 
@@ -178,11 +181,31 @@ export default function InvoiceDetailScreen() {
       )}
 
       <View style={[styles.headerCard, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-          <View style={{ flex: 1 }}>
+        <View style={[styles.brandRow, { borderBottomColor: colors.border }]}>
+          {user?.logoUri ? (
+            <Image source={{ uri: user.logoUri }} style={styles.logo} contentFit="cover" />
+          ) : (
+            <View style={[styles.logoFallback, { backgroundColor: colors.primary }]}>
+              <Feather name="briefcase" size={18} color={colors.primaryForeground} />
+            </View>
+          )}
+          <View style={{ marginLeft: 12, flex: 1 }}>
+            <Text style={[styles.brandName, { color: colors.foreground }]} numberOfLines={1}>
+              {user?.businessName ?? "Your business"}
+            </Text>
+            <Text style={[styles.brandEmail, { color: colors.mutedForeground }]} numberOfLines={1}>
+              {user?.email ?? ""}
+            </Text>
+          </View>
+        </View>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12, marginTop: 14 }}>
+          <Pressable
+            onPress={() => router.push(`/customer/${encodeURIComponent(invoice.customerEmail)}`)}
+            style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.7 : 1 }]}
+          >
             <Text style={[styles.customerName, { color: colors.foreground }]}>{invoice.customerName}</Text>
             <Text style={[styles.customerEmail, { color: colors.mutedForeground }]}>{invoice.customerEmail}</Text>
-          </View>
+          </Pressable>
           <StatusBadge status={invoice.status} />
         </View>
         <Text style={[styles.due, { color: colors.mutedForeground }]}>
@@ -292,6 +315,11 @@ const styles = StyleSheet.create({
   banner: { flexDirection: "row", alignItems: "center", padding: 14, marginBottom: 16, gap: 10 },
   bannerText: { fontFamily: "Inter_600SemiBold", fontSize: 14, marginLeft: 8 },
   headerCard: { padding: 18, borderWidth: 1, marginBottom: 18 },
+  brandRow: { flexDirection: "row", alignItems: "center", paddingBottom: 14, borderBottomWidth: StyleSheet.hairlineWidth },
+  logo: { width: 44, height: 44, borderRadius: 10 },
+  logoFallback: { width: 44, height: 44, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  brandName: { fontFamily: "Inter_700Bold", fontSize: 15 },
+  brandEmail: { fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 2 },
   customerName: { fontFamily: "Inter_700Bold", fontSize: 20 },
   customerEmail: { fontFamily: "Inter_400Regular", fontSize: 13, marginTop: 2 },
   due: { fontFamily: "Inter_500Medium", fontSize: 13, marginTop: 6 },

@@ -9,6 +9,7 @@ type AuthContextType = {
   signOut: () => Promise<void>;
   updateBusinessName: (name: string) => Promise<void>;
   updateCurrency: (currency: string) => Promise<void>;
+  updateLogo: (logoUri: string | null) => Promise<void>;
   loading: boolean;
 };
 
@@ -80,9 +81,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await persistUser({ ...user, currency });
   };
 
+  const updateLogo = async (logoUri: string | null) => {
+    if (!user) return;
+    await persistUser({ ...user, logoUri: logoUri ?? undefined });
+  };
+
   return (
     <AuthContext.Provider
-      value={{ user, signIn, signUp, signOut, updateBusinessName, updateCurrency, loading }}
+      value={{ user, signIn, signUp, signOut, updateBusinessName, updateCurrency, updateLogo, loading }}
     >
       {children}
     </AuthContext.Provider>

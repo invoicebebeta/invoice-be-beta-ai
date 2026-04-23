@@ -4,6 +4,7 @@ export type User = {
   password: string;
   businessName: string;
   currency?: string;
+  logoUri?: string;
 };
 
 export type LineItem = {
