@@ -11,6 +11,7 @@ import { useInvoices } from "@/contexts/InvoicesContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { TextField } from "@/components/TextField";
+import { CustomerSuggest, CustomerSuggestion } from "@/components/CustomerSuggest";
 import { LineItemEditor } from "@/components/LineItemEditor";
 import { DepositToggle } from "@/components/DepositToggle";
 import { PrimaryButton } from "@/components/PrimaryButton";
@@ -32,8 +33,23 @@ export default function CreateInvoiceScreen() {
   const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { addInvoice } = useInvoices();
+  const { addInvoice, invoices } = useInvoices();
   const { user } = useAuth();
+
+  const customers = useMemo<CustomerSuggestion[]>(() => {
+    const byEmail = new Map<string, CustomerSuggestion>();
+    for (const inv of invoices) {
+      const key = (inv.customerEmail || inv.customerName).toLowerCase();
+      if (!key) continue;
+      const existing = byEmail.get(key);
+      if (!existing || new Date(inv.createdAt) > new Date(existing.lastUsed)) {
+        byEmail.set(key, { name: inv.customerName, email: inv.customerEmail, lastUsed: inv.createdAt });
+      }
+    }
+    return Array.from(byEmail.values()).sort(
+      (a, b) => new Date(b.lastUsed).getTime() - new Date(a.lastUsed).getTime()
+    );
+  }, [invoices]);
 
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
@@ -117,8 +133,19 @@ export default function CreateInvoiceScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <Text style={[styles.section, { color: colors.mutedForeground }]}>Customer</Text>
-        <TextField label="Name" placeholder="Acme Corp" value={customerName} onChangeText={setCustomerName} error={errors.customerName} />
-        <TextField label="Email" placeholder="billing@acme.com" value={customerEmail} onChangeText={setCustomerEmail} autoCapitalize="none" keyboardType="email-address" error={errors.customerEmail} />
+        <CustomerSuggest
+          customers={customers}
+          name={customerName}
+          email={customerEmail}
+          onChangeName={setCustomerName}
+          onChangeEmail={setCustomerEmail}
+          onPick={(c) => {
+            setCustomerName(c.name);
+            setCustomerEmail(c.email);
+          }}
+          nameError={errors.customerName}
+          emailError={errors.customerEmail}
+        />
 
         <Text style={[styles.section, { color: colors.mutedForeground, marginTop: 12 }]}>Line items</Text>
         {items.map((it, i) => (
