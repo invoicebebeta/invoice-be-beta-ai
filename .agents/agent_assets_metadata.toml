@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "nWzrikjrb8zhg5DA9EkYw"
+uri = "file://artifacts/invoice-be-beta-ai/assets/images/icon.png"
+type = "image"
+title = "invoice app icon"

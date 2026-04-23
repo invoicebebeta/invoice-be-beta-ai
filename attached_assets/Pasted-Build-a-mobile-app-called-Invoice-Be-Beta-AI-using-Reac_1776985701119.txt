@@ -1,0 +1,145 @@
+Build a mobile app called "Invoice Be Beta AI" using React Native with Expo.
+
+Core requirements:
+
+* Use Expo for development and testing
+* Use React Navigation for navigation
+* Use AsyncStorage for local data storage (MVP)
+* Clean, modern, mobile-first UI with a simple and friendly design
+
+Main features:
+
+1. Authentication:
+
+* Email + password sign up and login
+* Persist user session locally
+
+2. Dashboard screen:
+
+* Display list of invoices/jobs
+* Show status labels:
+
+  * Draft
+  * Awaiting Deposit
+  * Deposit Paid
+  * Fully Paid
+* Display total revenue summary
+* Button to create a new invoice/job
+
+3. Create Invoice / Job screen:
+
+* Input customer name and email
+* Add multiple line items (name, price, quantity)
+* Automatically calculate total price
+* Add due date
+
+Deposit feature:
+
+* Toggle: "Require deposit"
+* If enabled:
+
+  * Select deposit percentage (10%, 20%, or custom input)
+  * Automatically calculate deposit amount
+  * Automatically calculate remaining balance
+
+4. AI-assisted input:
+
+* When user enters a product/service name:
+
+  * Auto-generate a short product description
+  * Use a mock AI helper function (placeholder for future API integration)
+
+5. Invoice Detail screen:
+
+* Display:
+
+  * Total amount
+  * Deposit amount (if applicable)
+  * Remaining balance
+
+* Display payment status:
+
+  * Awaiting deposit
+  * Deposit paid
+  * Fully paid
+
+* Actions:
+
+  * "Request Deposit"
+  * "Mark Deposit as Paid" (simulate for MVP)
+  * "Request Final Payment"
+  * "Mark as Fully Paid"
+
+6. Payment flow (MVP simulation):
+
+* “Pay Deposit” button
+* “Pay Remaining Balance” button
+* Simulate payment success/failure
+* Structure code so it can later integrate with Stripe
+
+7. Shareable links (placeholder):
+
+* Generate a mock public link for each invoice
+* Separate links for:
+
+  * Deposit payment
+  * Final payment
+
+8. Review flow:
+
+* After final payment:
+
+  * Navigate to review screen
+  * Collect:
+
+    * Star rating (1–5)
+    * Short text review
+* Save reviews locally
+
+9. Business Profile screen:
+
+* Display business name
+* Show list of reviews
+* Show average rating
+
+10. Navigation:
+
+* Bottom tab navigation with:
+
+  * Dashboard
+  * Create Invoice
+  * Profile
+
+11. Code structure:
+
+* /screens (Dashboard, CreateInvoice, InvoiceDetail, Review, Profile)
+* /components (reusable UI components)
+* /utils:
+
+  * calculation helpers (totals, deposit logic)
+  * mock AI generator
+
+12. UI/UX requirements:
+
+* Very simple and intuitive
+* Mobile-first design
+* Clear visual breakdown of:
+
+  * Total
+  * Deposit
+  * Remaining balance
+* Highlight next required action (e.g., “Deposit Required”)
+
+13. Extras:
+
+* Include sample seed data (some invoices with deposits)
+* Add clear instructions to run using:
+
+  * npx expo start
+* Keep code clean, readable, and well-commented
+
+Important:
+
+* Focus on MVP only (no complex backend yet)
+* Use mock APIs where needed
+* Keep architecture simple and easy to extend later (e.g., Stripe integration, backend, database)
