@@ -259,6 +259,15 @@ export default function InvoiceDetailScreen() {
         })()}
       />
 
+      {invoice.notes ? (
+        <>
+          <Text style={[styles.section, { color: colors.mutedForeground, marginTop: 20 }]}>Notes & terms</Text>
+          <View style={[styles.notesCard, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
+            <Text style={[styles.notesText, { color: colors.foreground }]}>{invoice.notes}</Text>
+          </View>
+        </>
+      ) : null}
+
       {(invoice.depositLink || invoice.finalLink) && (
         <>
           <Text style={[styles.section, { color: colors.mutedForeground, marginTop: 20 }]}>Shareable links</Text>
@@ -339,6 +348,8 @@ const styles = StyleSheet.create({
   customerName: { fontFamily: "Inter_700Bold", fontSize: 20 },
   customerEmail: { fontFamily: "Inter_400Regular", fontSize: 13, marginTop: 2 },
   due: { fontFamily: "Inter_500Medium", fontSize: 13, marginTop: 6 },
+  notesCard: { padding: 16, borderWidth: 1 },
+  notesText: { fontFamily: "Inter_400Regular", fontSize: 14, lineHeight: 21 },
   section: { fontFamily: "Inter_600SemiBold", fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 },
   itemsCard: { borderWidth: 1, paddingHorizontal: 16 },
   itemRow: { flexDirection: "row", alignItems: "flex-start", paddingVertical: 14 },

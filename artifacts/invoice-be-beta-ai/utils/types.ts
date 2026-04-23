@@ -35,6 +35,7 @@ export type Invoice = {
   currency?: string;
   depositLink?: string;
   finalLink?: string;
+  notes?: string;
   createdAt: string;
 };
 

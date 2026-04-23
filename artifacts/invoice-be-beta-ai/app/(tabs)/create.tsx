@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -66,6 +66,7 @@ export default function CreateInvoiceScreen() {
   const [requireDeposit, setRequireDeposit] = useState(false);
   const [depositPercent, setDepositPercent] = useState(20);
   const [dueDays, setDueDays] = useState(14);
+  const [notes, setNotes] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
@@ -78,6 +79,7 @@ export default function CreateInvoiceScreen() {
     setRequireDeposit(false);
     setDepositPercent(20);
     setDueDays(14);
+    setNotes("");
     setErrors({});
     loadedForRef.current = null;
   };
@@ -95,6 +97,7 @@ export default function CreateInvoiceScreen() {
     setRequireDeposit(editingInvoice.requireDeposit);
     setDepositPercent(editingInvoice.depositPercent || 20);
     setDueDays(daysFromNow(editingInvoice.dueDate));
+    setNotes(editingInvoice.notes ?? "");
     setErrors({});
     loadedForRef.current = editingInvoice.id;
   }, [editing, editingInvoice]);
@@ -150,6 +153,7 @@ export default function CreateInvoiceScreen() {
         total,
         depositAmount,
         remainingBalance: remaining,
+        notes: notes.trim() || undefined,
         depositLink: requireDeposit
           ? editingInvoice.depositLink ?? generateShareLink(editingInvoice.id, "deposit")
           : undefined,
@@ -178,6 +182,7 @@ export default function CreateInvoiceScreen() {
       currency: user?.currency ?? "USD",
       depositLink: requireDeposit ? generateShareLink(id, "deposit") : undefined,
       finalLink: generateShareLink(id, "final"),
+      notes: notes.trim() || undefined,
       createdAt: new Date().toISOString(),
     };
     await addInvoice(invoice);
@@ -285,6 +290,28 @@ export default function CreateInvoiceScreen() {
           currency={editing ? editingInvoice?.currency : user?.currency}
         />
 
+        <Text style={[styles.section, { color: colors.mutedForeground, marginTop: 16 }]}>Notes & terms</Text>
+        <TextInput
+          placeholder="Payment instructions, thank-you message, terms..."
+          placeholderTextColor={colors.mutedForeground}
+          value={notes}
+          onChangeText={setNotes}
+          multiline
+          maxLength={500}
+          style={[
+            styles.notesInput,
+            {
+              color: colors.foreground,
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+              borderRadius: colors.radius,
+            },
+          ]}
+        />
+        <Text style={[styles.notesHint, { color: colors.mutedForeground }]}>
+          {notes.length}/500 · Shown to your customer on the invoice
+        </Text>
+
         <View style={[styles.totalRow, { borderTopColor: colors.border }]}>
           <Text style={[styles.totalLabel, { color: colors.mutedForeground }]}>Total</Text>
           <Text style={[styles.totalValue, { color: colors.foreground }]}>
@@ -308,4 +335,15 @@ const styles = StyleSheet.create({
   totalRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 18, borderTopWidth: StyleSheet.hairlineWidth, marginTop: 10, marginBottom: 18 },
   totalLabel: { fontFamily: "Inter_500Medium", fontSize: 14, textTransform: "uppercase", letterSpacing: 0.4 },
   totalValue: { fontFamily: "Inter_700Bold", fontSize: 24, fontVariant: ["tabular-nums"] },
+  notesInput: {
+    minHeight: 96,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderWidth: 1,
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    textAlignVertical: "top",
+    marginBottom: 6,
+  },
+  notesHint: { fontFamily: "Inter_400Regular", fontSize: 11, marginBottom: 12 },
 });
