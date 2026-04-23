@@ -13,15 +13,19 @@ import { InvoiceRow } from "@/components/InvoiceRow";
 import { EmptyState } from "@/components/EmptyState";
 import { InvoiceStatus } from "@/utils/types";
 
-type FilterKey = "all" | InvoiceStatus;
+type FilterKey = "all" | "overdue" | InvoiceStatus;
 
 const FILTERS: { key: FilterKey; label: string }[] = [
   { key: "all", label: "All" },
+  { key: "overdue", label: "Overdue" },
   { key: "draft", label: "Draft" },
   { key: "awaiting_deposit", label: "Awaiting deposit" },
   { key: "deposit_paid", label: "Deposit paid" },
   { key: "fully_paid", label: "Paid" },
 ];
+
+const isOverdueInvoice = (inv: { status: InvoiceStatus; dueDate: string }) =>
+  inv.status !== "fully_paid" && new Date(inv.dueDate).getTime() < Date.now();
 
 export default function DashboardScreen() {
   const colors = useColors();
@@ -39,7 +43,11 @@ export default function DashboardScreen() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return invoices.filter((inv) => {
-      if (filter !== "all" && inv.status !== filter) return false;
+      if (filter === "overdue") {
+        if (!isOverdueInvoice(inv)) return false;
+      } else if (filter !== "all" && inv.status !== filter) {
+        return false;
+      }
       if (!q) return true;
       return (
         inv.customerName.toLowerCase().includes(q) ||
@@ -52,12 +60,16 @@ export default function DashboardScreen() {
   const counts = useMemo(() => {
     const map: Record<FilterKey, number> = {
       all: invoices.length,
+      overdue: 0,
       draft: 0,
       awaiting_deposit: 0,
       deposit_paid: 0,
       fully_paid: 0,
     };
-    for (const inv of invoices) map[inv.status] += 1;
+    for (const inv of invoices) {
+      map[inv.status] += 1;
+      if (isOverdueInvoice(inv)) map.overdue += 1;
+    }
     return map;
   }, [invoices]);
 

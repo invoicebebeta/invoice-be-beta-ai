@@ -12,6 +12,7 @@ export function InvoiceRow({ invoice, onPress }: Props) {
   const colors = useColors();
   const due = new Date(invoice.dueDate);
   const dueLabel = due.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const isOverdue = invoice.status !== 'fully_paid' && due.getTime() < Date.now();
 
   return (
     <Pressable
@@ -36,8 +37,10 @@ export function InvoiceRow({ invoice, onPress }: Props) {
         <View style={styles.bottomRow}>
           <StatusBadge status={invoice.status} />
           <View style={styles.dueWrap}>
-            <Feather name="calendar" size={12} color={colors.mutedForeground} />
-            <Text style={[styles.due, { color: colors.mutedForeground }]}>Due {dueLabel}</Text>
+            <Feather name={isOverdue ? 'alert-circle' : 'calendar'} size={12} color={isOverdue ? colors.destructive : colors.mutedForeground} />
+            <Text style={[styles.due, { color: isOverdue ? colors.destructive : colors.mutedForeground }]}>
+              {isOverdue ? `Overdue · ${dueLabel}` : `Due ${dueLabel}`}
+            </Text>
           </View>
         </View>
       </View>
