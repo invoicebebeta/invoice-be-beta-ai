@@ -27,7 +27,7 @@ export default function InvoiceDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const colors = useColors();
-  const { getInvoice, updateInvoice, duplicateInvoice } = useInvoices();
+  const { getInvoice, updateInvoice, duplicateInvoice, deleteInvoice } = useInvoices();
   const invoice = getInvoice(String(id));
   const [pendingAction, setPendingAction] = useState<string | null>(null);
 
@@ -116,6 +116,28 @@ export default function InvoiceDetailScreen() {
     } else {
       haptic("warning");
       showAlert("Payment failed", "The simulated payment failed. Try again.");
+    }
+  };
+
+  const onDelete = () => {
+    const doDelete = async () => {
+      await deleteInvoice(invoice.id);
+      haptic();
+      router.replace("/(tabs)");
+    };
+    if (Platform.OS === "web") {
+      if (window.confirm(`Delete this draft for ${invoice.customerName}? This cannot be undone.`)) {
+        doDelete();
+      }
+    } else {
+      Alert.alert(
+        "Delete draft?",
+        `This will permanently remove the invoice for ${invoice.customerName}.`,
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Delete", style: "destructive", onPress: doDelete },
+        ]
+      );
     }
   };
 
@@ -237,6 +259,9 @@ export default function InvoiceDetailScreen() {
           <SecondaryButton title="Edit invoice" onPress={() => router.push(`/(tabs)/create?editId=${invoice.id}`)} icon="edit-2" />
         )}
         <SecondaryButton title="Duplicate invoice" onPress={onDuplicate} icon="copy" />
+        {invoice.status === "draft" && (
+          <SecondaryButton title="Delete draft" onPress={onDelete} icon="trash-2" variant="destructive" />
+        )}
       </View>
     </ScrollView>
   );

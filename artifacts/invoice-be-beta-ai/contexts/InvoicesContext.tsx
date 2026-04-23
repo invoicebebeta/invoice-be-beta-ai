@@ -9,6 +9,7 @@ type InvoicesContextType = {
   loading: boolean;
   addInvoice: (invoice: Invoice) => Promise<void>;
   updateInvoice: (id: string, patch: Partial<Invoice>) => Promise<void>;
+  deleteInvoice: (id: string) => Promise<void>;
   duplicateInvoice: (id: string) => Promise<Invoice | null>;
   getInvoice: (id: string) => Invoice | undefined;
   totalRevenue: number;
@@ -46,6 +47,10 @@ export function InvoicesProvider({ children }: { children: React.ReactNode }) {
     await persist(next);
   };
 
+  const deleteInvoice = async (id: string) => {
+    await persist(invoices.filter((inv) => inv.id !== id));
+  };
+
   const duplicateInvoice = async (id: string) => {
     const source = invoices.find((i) => i.id === id);
     if (!source) return null;
@@ -78,7 +83,7 @@ export function InvoicesProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <InvoicesContext.Provider
-      value={{ invoices, loading, addInvoice, updateInvoice, duplicateInvoice, getInvoice, totalRevenue }}
+      value={{ invoices, loading, addInvoice, updateInvoice, deleteInvoice, duplicateInvoice, getInvoice, totalRevenue }}
     >
       {children}
     </InvoicesContext.Provider>

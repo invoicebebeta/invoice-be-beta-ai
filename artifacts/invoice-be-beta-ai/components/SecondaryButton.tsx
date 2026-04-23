@@ -9,10 +9,14 @@ type Props = {
   disabled?: boolean;
   icon?: keyof typeof Feather.glyphMap;
   style?: ViewStyle;
+  variant?: 'default' | 'destructive';
 };
 
-export function SecondaryButton({ title, onPress, disabled, icon, style }: Props) {
+export function SecondaryButton({ title, onPress, disabled, icon, style, variant = 'default' }: Props) {
   const colors = useColors();
+  const isDestructive = variant === 'destructive';
+  const fg = isDestructive ? colors.destructive : colors.foreground;
+  const border = isDestructive ? colors.destructive : colors.border;
   return (
     <Pressable
       onPress={onPress}
@@ -20,7 +24,7 @@ export function SecondaryButton({ title, onPress, disabled, icon, style }: Props
       style={({ pressed }) => [
         styles.btn,
         {
-          borderColor: colors.border,
+          borderColor: border,
           backgroundColor: colors.card,
           borderRadius: colors.radius,
           opacity: disabled ? 0.5 : pressed ? 0.8 : 1,
@@ -29,8 +33,8 @@ export function SecondaryButton({ title, onPress, disabled, icon, style }: Props
       ]}
     >
       <View style={styles.row}>
-        {icon && <Feather name={icon} size={16} color={colors.foreground} style={{ marginRight: 6 }} />}
-        <Text style={[styles.text, { color: colors.foreground }]}>{title}</Text>
+        {icon && <Feather name={icon} size={16} color={fg} style={{ marginRight: 6 }} />}
+        <Text style={[styles.text, { color: fg }]}>{title}</Text>
       </View>
     </Pressable>
   );
