@@ -104,6 +104,7 @@ export default function CreateInvoiceScreen() {
       depositAmount,
       remainingBalance: remaining,
       status,
+      currency: user?.currency ?? "USD",
       depositLink: requireDeposit ? generateShareLink(id, "deposit") : undefined,
       finalLink: generateShareLink(id, "final"),
       createdAt: new Date().toISOString(),
@@ -190,11 +191,12 @@ export default function CreateInvoiceScreen() {
           total={total}
           depositAmount={depositAmount}
           remaining={remaining}
+          currency={user?.currency}
         />
 
         <View style={[styles.totalRow, { borderTopColor: colors.border }]}>
           <Text style={[styles.totalLabel, { color: colors.mutedForeground }]}>Total</Text>
-          <Text style={[styles.totalValue, { color: colors.foreground }]}>{formatMoney(total)}</Text>
+          <Text style={[styles.totalValue, { color: colors.foreground }]}>{formatMoney(total, user?.currency)}</Text>
         </View>
 
         <PrimaryButton title="Save invoice" onPress={onSave} loading={saving} icon="check" />

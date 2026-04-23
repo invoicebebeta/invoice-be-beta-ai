@@ -3,6 +3,7 @@ export type User = {
   email: string;
   password: string;
   businessName: string;
+  currency?: string;
 };
 
 export type LineItem = {
@@ -28,6 +29,7 @@ export type Invoice = {
   depositAmount: number;
   remainingBalance: number;
   status: InvoiceStatus;
+  currency?: string;
   depositLink?: string;
   finalLink?: string;
   createdAt: string;

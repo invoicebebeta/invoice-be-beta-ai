@@ -27,7 +27,7 @@ export default function InvoiceDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const colors = useColors();
-  const { getInvoice, updateInvoice } = useInvoices();
+  const { getInvoice, updateInvoice, duplicateInvoice } = useInvoices();
   const invoice = getInvoice(String(id));
   const [pendingAction, setPendingAction] = useState<string | null>(null);
 
@@ -80,7 +80,7 @@ export default function InvoiceDetailScreen() {
     if (r.success) {
       await updateInvoice(invoice.id, { status: "deposit_paid" });
       haptic("success");
-      showAlert("Payment successful", `Deposit of ${formatMoney(invoice.depositAmount)} received.`);
+      showAlert("Payment successful", `Deposit of ${formatMoney(invoice.depositAmount, invoice.currency)} received.`);
     } else {
       haptic("warning");
       showAlert("Payment failed", "The simulated payment failed. Try again.");
@@ -116,6 +116,16 @@ export default function InvoiceDetailScreen() {
     } else {
       haptic("warning");
       showAlert("Payment failed", "The simulated payment failed. Try again.");
+    }
+  };
+
+  const onDuplicate = async () => {
+    setPendingAction("duplicate");
+    const copy = await duplicateInvoice(invoice.id);
+    setPendingAction(null);
+    if (copy) {
+      haptic();
+      router.replace(`/invoice/${copy.id}`);
     }
   };
 
@@ -166,16 +176,17 @@ export default function InvoiceDetailScreen() {
               <Text style={[styles.itemName, { color: colors.foreground }]}>{it.name}</Text>
               {it.description ? <Text style={[styles.itemDesc, { color: colors.mutedForeground }]}>{it.description}</Text> : null}
               <Text style={[styles.itemMeta, { color: colors.mutedForeground }]}>
-                {it.quantity} × {formatMoney(it.price)}
+                {it.quantity} × {formatMoney(it.price, invoice.currency)}
               </Text>
             </View>
-            <Text style={[styles.itemTotal, { color: colors.foreground }]}>{formatMoney(it.price * it.quantity)}</Text>
+            <Text style={[styles.itemTotal, { color: colors.foreground }]}>{formatMoney(it.price * it.quantity, invoice.currency)}</Text>
           </View>
         ))}
       </View>
 
       <Text style={[styles.section, { color: colors.mutedForeground, marginTop: 20 }]}>Amount</Text>
       <AmountBreakdown
+        currency={invoice.currency}
         rows={[
           { label: "Total", value: invoice.total, emphasis: !invoice.requireDeposit },
           ...(invoice.requireDeposit
@@ -201,20 +212,20 @@ export default function InvoiceDetailScreen() {
         )}
         {invoice.status === "awaiting_deposit" && (
           <>
-            <PrimaryButton title={`Pay deposit (${formatMoney(invoice.depositAmount)})`} onPress={payDeposit} loading={pendingAction === "pay_deposit"} icon="credit-card" />
+            <PrimaryButton title={`Pay deposit (${formatMoney(invoice.depositAmount, invoice.currency)})`} onPress={payDeposit} loading={pendingAction === "pay_deposit"} icon="credit-card" />
             <SecondaryButton title="Mark deposit as paid" onPress={markDepositPaid} icon="check" />
           </>
         )}
         {invoice.status === "deposit_paid" && (
           <>
-            <PrimaryButton title={`Pay remaining (${formatMoney(invoice.remainingBalance)})`} onPress={payRemaining} loading={pendingAction === "pay_remaining"} icon="credit-card" variant="success" />
+            <PrimaryButton title={`Pay remaining (${formatMoney(invoice.remainingBalance, invoice.currency)})`} onPress={payRemaining} loading={pendingAction === "pay_remaining"} icon="credit-card" variant="success" />
             <SecondaryButton title="Request final payment" onPress={requestFinal} icon="send" />
             <SecondaryButton title="Mark as fully paid" onPress={markFullyPaid} icon="check-circle" />
           </>
         )}
         {invoice.status === "draft" && !invoice.requireDeposit && (
           <>
-            <PrimaryButton title={`Pay invoice (${formatMoney(invoice.total)})`} onPress={payRemaining} loading={pendingAction === "pay_remaining"} icon="credit-card" variant="success" />
+            <PrimaryButton title={`Pay invoice (${formatMoney(invoice.total, invoice.currency)})`} onPress={payRemaining} loading={pendingAction === "pay_remaining"} icon="credit-card" variant="success" />
             <SecondaryButton title="Request payment" onPress={requestFinal} icon="send" />
             <SecondaryButton title="Mark as fully paid" onPress={markFullyPaid} icon="check-circle" />
           </>
@@ -222,6 +233,7 @@ export default function InvoiceDetailScreen() {
         {invoice.status === "fully_paid" && (
           <PrimaryButton title="Leave a review" onPress={() => router.push(`/review/${invoice.id}`)} icon="star" variant="success" />
         )}
+        <SecondaryButton title="Duplicate invoice" onPress={onDuplicate} icon="copy" />
       </View>
     </ScrollView>
   );

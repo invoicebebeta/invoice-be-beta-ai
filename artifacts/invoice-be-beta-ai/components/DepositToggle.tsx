@@ -11,11 +11,12 @@ type Props = {
   total: number;
   depositAmount: number;
   remaining: number;
+  currency?: string;
 };
 
 const PRESETS = [10, 20, 50];
 
-export function DepositToggle({ enabled, onToggle, percent, onPercentChange, total, depositAmount, remaining }: Props) {
+export function DepositToggle({ enabled, onToggle, percent, onPercentChange, total, depositAmount, remaining, currency }: Props) {
   const colors = useColors();
   const isPreset = PRESETS.includes(percent);
 
@@ -79,11 +80,11 @@ export function DepositToggle({ enabled, onToggle, percent, onPercentChange, tot
           <View style={[styles.summary, { borderTopColor: colors.border }]}>
             <View style={styles.summaryRow}>
               <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>Deposit</Text>
-              <Text style={[styles.summaryValue, { color: colors.foreground }]}>{formatMoney(depositAmount)}</Text>
+              <Text style={[styles.summaryValue, { color: colors.foreground }]}>{formatMoney(depositAmount, currency)}</Text>
             </View>
             <View style={styles.summaryRow}>
               <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>Remaining</Text>
-              <Text style={[styles.summaryValue, { color: colors.foreground }]}>{formatMoney(remaining)}</Text>
+              <Text style={[styles.summaryValue, { color: colors.foreground }]}>{formatMoney(remaining, currency)}</Text>
             </View>
           </View>
         </View>

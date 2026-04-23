@@ -12,9 +12,14 @@ export function calculateRemaining(total: number, depositAmount: number): number
   return total - depositAmount;
 }
 
-export function formatMoney(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(amount);
+export function formatMoney(amount: number, currency: string = 'USD'): string {
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  } catch {
+    return `${currency} ${amount.toFixed(2)}`;
+  }
 }

@@ -11,12 +11,12 @@ import { TextField } from "@/components/TextField";
 import { SecondaryButton } from "@/components/SecondaryButton";
 import { StarRating } from "@/components/StarRating";
 import { EmptyState } from "@/components/EmptyState";
-import { PrimaryButton } from "@/components/PrimaryButton";
+import { CurrencyPicker } from "@/components/CurrencyPicker";
 
 export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, signOut, updateBusinessName } = useAuth();
+  const { user, signOut, updateBusinessName, updateCurrency } = useAuth();
   const { reviews, averageRating } = useReviews();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(user?.businessName ?? "");
@@ -69,6 +69,14 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        <Text style={[styles.section, { color: colors.mutedForeground }]}>Currency</Text>
+        <View style={{ marginBottom: 24 }}>
+          <CurrencyPicker value={user?.currency ?? "USD"} onChange={updateCurrency} />
+          <Text style={[styles.helper, { color: colors.mutedForeground }]}>
+            New invoices will use this currency. Existing invoices keep their original currency.
+          </Text>
+        </View>
+
         <Text style={[styles.section, { color: colors.mutedForeground }]}>Reviews</Text>
         {reviews.length === 0 ? (
           <EmptyState icon="message-square" title="No reviews yet" description="Reviews appear here after your customers leave feedback." />
@@ -104,6 +112,7 @@ const styles = StyleSheet.create({
   ratingNumber: { fontFamily: "Inter_700Bold", fontSize: 26, fontVariant: ["tabular-nums"] },
   ratingSub: { fontFamily: "Inter_400Regular", fontSize: 12 },
   section: { fontFamily: "Inter_600SemiBold", fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 },
+  helper: { fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 8, lineHeight: 17 },
   reviewCard: { padding: 14, borderWidth: 1, marginBottom: 10 },
   reviewHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
   reviewDate: { fontFamily: "Inter_500Medium", fontSize: 12 },

@@ -8,6 +8,7 @@ type AuthContextType = {
   signUp: (email: string, password: string, businessName: string) => Promise<{ ok: boolean; error?: string }>;
   signOut: () => Promise<void>;
   updateBusinessName: (name: string) => Promise<void>;
+  updateCurrency: (currency: string) => Promise<void>;
   loading: boolean;
 };
 
@@ -22,7 +23,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     (async () => {
       const stored = await storage.get<User>(CURRENT_KEY);
-      if (stored) setUser(stored);
+      if (stored) setUser({ currency: 'USD', ...stored });
       setLoading(false);
     })();
   }, []);
@@ -38,6 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email,
       password,
       businessName,
+      currency: 'USD',
     };
     await storage.set(USERS_KEY, [...users, newUser]);
     await storage.set(CURRENT_KEY, newUser);
@@ -50,8 +52,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const users = (await storage.get<User[]>(USERS_KEY)) ?? [];
     const found = users.find((u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
     if (!found) return { ok: false, error: 'Invalid email or password' };
-    await storage.set(CURRENT_KEY, found);
-    setUser(found);
+    const withDefaults = { currency: 'USD', ...found };
+    await storage.set(CURRENT_KEY, withDefaults);
+    setUser(withDefaults);
     return { ok: true };
   };
 
@@ -60,20 +63,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   };
 
-  const updateBusinessName = async (name: string) => {
-    if (!user) return;
-    const updated = { ...user, businessName: name };
+  const persistUser = async (updated: User) => {
     setUser(updated);
     await storage.set(CURRENT_KEY, updated);
     const users = (await storage.get<User[]>(USERS_KEY)) ?? [];
-    await storage.set(
-      USERS_KEY,
-      users.map((u) => (u.id === user.id ? updated : u))
-    );
+    await storage.set(USERS_KEY, users.map((u) => (u.id === updated.id ? updated : u)));
+  };
+
+  const updateBusinessName = async (name: string) => {
+    if (!user) return;
+    await persistUser({ ...user, businessName: name });
+  };
+
+  const updateCurrency = async (currency: string) => {
+    if (!user) return;
+    await persistUser({ ...user, currency });
   };
 
   return (
-    <AuthContext.Provider value={{ user, signIn, signUp, signOut, updateBusinessName, loading }}>
+    <AuthContext.Provider
+      value={{ user, signIn, signUp, signOut, updateBusinessName, updateCurrency, loading }}
+    >
       {children}
     </AuthContext.Provider>
   );

@@ -31,7 +31,7 @@ export function InvoiceRow({ invoice, onPress }: Props) {
           <Text style={[styles.customer, { color: colors.foreground }]} numberOfLines={1}>
             {invoice.customerName}
           </Text>
-          <Text style={[styles.amount, { color: colors.foreground }]}>{formatMoney(invoice.total)}</Text>
+          <Text style={[styles.amount, { color: colors.foreground }]}>{formatMoney(invoice.total, invoice.currency)}</Text>
         </View>
         <View style={styles.bottomRow}>
           <StatusBadge status={invoice.status} />

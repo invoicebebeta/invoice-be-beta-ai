@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useColors } from "@/hooks/useColors";
 import { useInvoices } from "@/contexts/InvoicesContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { RevenueCard } from "@/components/RevenueCard";
 import { InvoiceRow } from "@/components/InvoiceRow";
@@ -16,6 +17,7 @@ export default function DashboardScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { invoices, totalRevenue } = useInvoices();
+  const { user } = useAuth();
 
   const topInset = Platform.OS === "web" ? 67 : insets.top;
   const tabBar = Platform.OS === "web" ? 84 : 84;
@@ -30,7 +32,7 @@ export default function DashboardScreen() {
         data={invoices}
         keyExtractor={(i) => i.id}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: tabBar + 24 }}
-        ListHeaderComponent={<RevenueCard total={totalRevenue} count={invoices.length} />}
+        ListHeaderComponent={<RevenueCard total={totalRevenue} count={invoices.length} currency={user?.currency} />}
         renderItem={({ item }) => (
           <InvoiceRow invoice={item} onPress={() => router.push(`/invoice/${item.id}`)} />
         )}

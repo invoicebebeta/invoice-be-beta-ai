@@ -4,9 +4,9 @@ import { Feather } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
 import { formatMoney } from '@/utils/calculations';
 
-type Props = { total: number; count: number };
+type Props = { total: number; count: number; currency?: string };
 
-export function RevenueCard({ total, count }: Props) {
+export function RevenueCard({ total, count, currency }: Props) {
   const colors = useColors();
   return (
     <View style={[styles.card, { backgroundColor: colors.primary, borderRadius: colors.radius }]}>
@@ -16,7 +16,7 @@ export function RevenueCard({ total, count }: Props) {
         </View>
         <Text style={[styles.label, { color: colors.primaryForeground }]}>Total revenue</Text>
       </View>
-      <Text style={[styles.amount, { color: colors.primaryForeground }]}>{formatMoney(total)}</Text>
+      <Text style={[styles.amount, { color: colors.primaryForeground }]}>{formatMoney(total, currency)}</Text>
       <Text style={[styles.sub, { color: colors.primaryForeground }]} numberOfLines={1}>
         Across {count} {count === 1 ? 'invoice' : 'invoices'}
       </Text>

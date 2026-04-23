@@ -5,7 +5,7 @@ import { formatMoney } from '@/utils/calculations';
 
 type Row = { label: string; value: number; emphasis?: boolean };
 
-export function AmountBreakdown({ rows }: { rows: Row[] }) {
+export function AmountBreakdown({ rows, currency }: { rows: Row[]; currency?: string }) {
   const colors = useColors();
   return (
     <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
@@ -20,7 +20,7 @@ export function AmountBreakdown({ rows }: { rows: Row[] }) {
           <Text style={[styles.label, { color: r.emphasis ? colors.foreground : colors.mutedForeground }, r.emphasis && styles.bold]}>
             {r.label}
           </Text>
-          <Text style={[styles.value, { color: colors.foreground }, r.emphasis && styles.bold]}>{formatMoney(r.value)}</Text>
+          <Text style={[styles.value, { color: colors.foreground }, r.emphasis && styles.bold]}>{formatMoney(r.value, currency)}</Text>
         </View>
       ))}
     </View>
