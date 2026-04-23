@@ -1,7 +1,7 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
@@ -10,7 +10,6 @@ import { useColors } from "@/hooks/useColors";
 import { useInvoices } from "@/contexts/InvoicesContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { ScreenHeader } from "@/components/ScreenHeader";
-import { TextField } from "@/components/TextField";
 import { CustomerSuggest, CustomerSuggestion } from "@/components/CustomerSuggest";
 import { LineItemEditor } from "@/components/LineItemEditor";
 import { DepositToggle } from "@/components/DepositToggle";
@@ -29,12 +28,22 @@ const DUE_PRESETS = [
   { label: "30 days", days: 30 },
 ];
 
+const daysFromNow = (iso: string) => {
+  const diff = new Date(iso).getTime() - Date.now();
+  return Math.max(1, Math.round(diff / (24 * 60 * 60 * 1000)));
+};
+
 export default function CreateInvoiceScreen() {
   const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { addInvoice, invoices } = useInvoices();
+  const { addInvoice, updateInvoice, getInvoice, invoices } = useInvoices();
   const { user } = useAuth();
+  const params = useLocalSearchParams<{ editId?: string }>();
+  const editId = typeof params.editId === "string" ? params.editId : undefined;
+  const editing = !!editId;
+  const editingInvoice = editing ? getInvoice(editId!) : undefined;
+  const editLocked = editing && editingInvoice && editingInvoice.status !== "draft";
 
   const customers = useMemo<CustomerSuggestion[]>(() => {
     const byEmail = new Map<string, CustomerSuggestion>();
@@ -59,6 +68,46 @@ export default function CreateInvoiceScreen() {
   const [dueDays, setDueDays] = useState(14);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+
+  const loadedForRef = useRef<string | null>(null);
+
+  const resetForm = () => {
+    setCustomerName("");
+    setCustomerEmail("");
+    setItems([blankItem()]);
+    setRequireDeposit(false);
+    setDepositPercent(20);
+    setDueDays(14);
+    setErrors({});
+    loadedForRef.current = null;
+  };
+
+  useEffect(() => {
+    if (!editing) {
+      if (loadedForRef.current !== null) resetForm();
+      return;
+    }
+    if (!editingInvoice) return;
+    if (loadedForRef.current === editingInvoice.id) return;
+    setCustomerName(editingInvoice.customerName);
+    setCustomerEmail(editingInvoice.customerEmail);
+    setItems(editingInvoice.lineItems.map((li) => ({ ...li })));
+    setRequireDeposit(editingInvoice.requireDeposit);
+    setDepositPercent(editingInvoice.depositPercent || 20);
+    setDueDays(daysFromNow(editingInvoice.dueDate));
+    setErrors({});
+    loadedForRef.current = editingInvoice.id;
+  }, [editing, editingInvoice]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      return () => {
+        if (editing) {
+          router.setParams({ editId: undefined as unknown as string });
+        }
+      };
+    }, [editing, router])
+  );
 
   const total = useMemo(() => calculateTotal(items), [items]);
   const depositAmount = requireDeposit ? calculateDeposit(total, depositPercent) : 0;
@@ -88,9 +137,31 @@ export default function CreateInvoiceScreen() {
     if (!validate()) return;
     setSaving(true);
     if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    const dueDate = new Date(Date.now() + dueDays * 24 * 60 * 60 * 1000).toISOString();
+
+    if (editing && editingInvoice) {
+      const patch: Partial<Invoice> = {
+        customerName: customerName.trim(),
+        customerEmail: customerEmail.trim(),
+        lineItems: items,
+        dueDate,
+        requireDeposit,
+        depositPercent: requireDeposit ? depositPercent : 0,
+        total,
+        depositAmount,
+        remainingBalance: remaining,
+        depositLink: requireDeposit
+          ? editingInvoice.depositLink ?? generateShareLink(editingInvoice.id, "deposit")
+          : undefined,
+      };
+      await updateInvoice(editingInvoice.id, patch);
+      setSaving(false);
+      router.replace(`/invoice/${editingInvoice.id}`);
+      return;
+    }
+
     const id = newId("inv");
     const status: InvoiceStatus = requireDeposit ? "awaiting_deposit" : "draft";
-    const dueDate = new Date(Date.now() + dueDays * 24 * 60 * 60 * 1000).toISOString();
     const invoice: Invoice = {
       id,
       userId: user?.id ?? "anonymous",
@@ -111,20 +182,35 @@ export default function CreateInvoiceScreen() {
     };
     await addInvoice(invoice);
     setSaving(false);
-    setCustomerName("");
-    setCustomerEmail("");
-    setItems([blankItem()]);
-    setRequireDeposit(false);
-    setDepositPercent(20);
-    setDueDays(14);
-    setErrors({});
+    resetForm();
     router.push(`/invoice/${id}`);
   };
+
+  if (editLocked) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: topInset }}>
+        <ScreenHeader title="Cannot edit" subtitle="This invoice has already started its payment flow" />
+        <View style={{ paddingHorizontal: 20 }}>
+          <PrimaryButton title="Back to invoice" onPress={() => router.replace(`/invoice/${editingInvoice!.id}`)} icon="arrow-left" />
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={{ paddingTop: topInset }}>
-        <ScreenHeader title="New invoice" subtitle="Fill in the details below" />
+        <ScreenHeader
+          title={editing ? "Edit draft" : "New invoice"}
+          subtitle={editing ? "Update the details before sending" : "Fill in the details below"}
+          right={
+            editing ? (
+              <Pressable onPress={() => router.replace(`/invoice/${editingInvoice!.id}`)} hitSlop={10} style={{ padding: 6 }}>
+                <Feather name="x" size={22} color={colors.mutedForeground} />
+              </Pressable>
+            ) : undefined
+          }
+        />
       </View>
 
       <KeyboardAwareScrollViewCompat
@@ -180,6 +266,11 @@ export default function CreateInvoiceScreen() {
               </Pressable>
             );
           })}
+          {!DUE_PRESETS.some((p) => p.days === dueDays) && (
+            <View style={[styles.chip, { borderRadius: colors.radius, backgroundColor: colors.primary, borderColor: colors.primary }]}>
+              <Text style={[styles.chipText, { color: colors.primaryForeground }]}>{dueDays} days</Text>
+            </View>
+          )}
         </View>
 
         <Text style={[styles.section, { color: colors.mutedForeground, marginTop: 16 }]}>Deposit</Text>
@@ -191,15 +282,17 @@ export default function CreateInvoiceScreen() {
           total={total}
           depositAmount={depositAmount}
           remaining={remaining}
-          currency={user?.currency}
+          currency={editing ? editingInvoice?.currency : user?.currency}
         />
 
         <View style={[styles.totalRow, { borderTopColor: colors.border }]}>
           <Text style={[styles.totalLabel, { color: colors.mutedForeground }]}>Total</Text>
-          <Text style={[styles.totalValue, { color: colors.foreground }]}>{formatMoney(total, user?.currency)}</Text>
+          <Text style={[styles.totalValue, { color: colors.foreground }]}>
+            {formatMoney(total, editing ? editingInvoice?.currency : user?.currency)}
+          </Text>
         </View>
 
-        <PrimaryButton title="Save invoice" onPress={onSave} loading={saving} icon="check" />
+        <PrimaryButton title={editing ? "Save changes" : "Save invoice"} onPress={onSave} loading={saving} icon="check" />
       </KeyboardAwareScrollViewCompat>
     </View>
   );
@@ -209,8 +302,8 @@ const styles = StyleSheet.create({
   section: { fontFamily: "Inter_600SemiBold", fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 },
   addBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 12, borderWidth: 1, borderStyle: "dashed", marginBottom: 8 },
   addText: { fontFamily: "Inter_500Medium", fontSize: 14, marginLeft: 6 },
-  chipsRow: { flexDirection: "row", marginBottom: 6 },
-  chip: { paddingVertical: 10, paddingHorizontal: 16, borderWidth: 1, marginRight: 8 },
+  chipsRow: { flexDirection: "row", marginBottom: 6, flexWrap: "wrap" },
+  chip: { paddingVertical: 10, paddingHorizontal: 16, borderWidth: 1, marginRight: 8, marginBottom: 8 },
   chipText: { fontFamily: "Inter_600SemiBold", fontSize: 13 },
   totalRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 18, borderTopWidth: StyleSheet.hairlineWidth, marginTop: 10, marginBottom: 18 },
   totalLabel: { fontFamily: "Inter_500Medium", fontSize: 14, textTransform: "uppercase", letterSpacing: 0.4 },

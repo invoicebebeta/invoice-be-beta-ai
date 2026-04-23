@@ -233,6 +233,9 @@ export default function InvoiceDetailScreen() {
         {invoice.status === "fully_paid" && (
           <PrimaryButton title="Leave a review" onPress={() => router.push(`/review/${invoice.id}`)} icon="star" variant="success" />
         )}
+        {invoice.status === "draft" && (
+          <SecondaryButton title="Edit invoice" onPress={() => router.push(`/(tabs)/create?editId=${invoice.id}`)} icon="edit-2" />
+        )}
         <SecondaryButton title="Duplicate invoice" onPress={onDuplicate} icon="copy" />
       </View>
     </ScrollView>
