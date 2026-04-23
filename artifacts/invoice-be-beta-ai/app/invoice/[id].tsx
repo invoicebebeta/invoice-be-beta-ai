@@ -22,6 +22,7 @@ import {
   formatMoney,
   lineTotal,
 } from "@/utils/calculations";
+import { downloadInvoicePdf } from "@/utils/invoicePdf";
 import { generateShareLink } from "@/utils/mockLinks";
 
 const NEXT_ACTION: Record<InvoiceStatus, string> = {
@@ -39,6 +40,7 @@ export default function InvoiceDetailScreen() {
   const { user } = useAuth();
   const invoice = getInvoice(String(id));
   const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   if (!invoice) {
     return (
@@ -307,6 +309,18 @@ export default function InvoiceDetailScreen() {
           <SecondaryButton title="Edit invoice" onPress={() => router.push(`/(tabs)/create?editId=${invoice.id}`)} icon="edit-2" />
         )}
         <SecondaryButton title="Duplicate invoice" onPress={onDuplicate} icon="copy" />
+        <SecondaryButton
+          title={pdfLoading ? "Generating PDF…" : "Download PDF"}
+          icon="download"
+          onPress={async () => {
+            setPdfLoading(true);
+            try {
+              await downloadInvoicePdf(invoice, user ?? null);
+            } finally {
+              setPdfLoading(false);
+            }
+          }}
+        />
         {invoice.status === "draft" && (
           <SecondaryButton title="Delete draft" onPress={onDelete} icon="trash-2" variant="destructive" />
         )}

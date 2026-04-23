@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -13,12 +13,16 @@ import { StarRating } from "@/components/StarRating";
 import { EmptyState } from "@/components/EmptyState";
 import { CurrencyPicker } from "@/components/CurrencyPicker";
 import { LogoPicker } from "@/components/LogoPicker";
+import { useInvoices } from "@/contexts/InvoicesContext";
+import { exportInvoicesCsv } from "@/utils/exportCsv";
 
 export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user, signOut, updateBusinessName, updateCurrency, updateLogo } = useAuth();
   const { reviews, averageRating } = useReviews();
+  const { invoices } = useInvoices();
+  const [csvLoading, setCsvLoading] = useState(false);
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(user?.businessName ?? "");
 
@@ -104,7 +108,27 @@ export default function ProfileScreen() {
           ))
         )}
 
-        <View style={{ marginTop: 24 }}>
+        <Text style={[styles.section, { color: colors.mutedForeground, marginTop: 8 }]}>Data</Text>
+        <View style={{ marginBottom: 24, gap: 10 }}>
+          <SecondaryButton
+            title={csvLoading ? "Exporting…" : `Export invoices (${invoices.length})`}
+            icon="download"
+            onPress={async () => {
+              if (!invoices.length) {
+                Alert.alert("Nothing to export", "You don't have any invoices yet.");
+                return;
+              }
+              setCsvLoading(true);
+              try {
+                await exportInvoicesCsv(invoices);
+              } finally {
+                setCsvLoading(false);
+              }
+            }}
+          />
+        </View>
+
+        <View style={{ marginTop: 8 }}>
           <SecondaryButton title="Sign out" onPress={signOut} icon="log-out" />
         </View>
       </View>
