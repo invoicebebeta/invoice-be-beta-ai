@@ -17,18 +17,39 @@ type InvoicesContextType = {
 
 const InvoicesContext = createContext<InvoicesContextType | null>(null);
 const KEY = 'invoices';
+const COUNTER_KEY = 'invoices_counter';
 
 const newId = (p: string) => p + '_' + Date.now().toString() + Math.random().toString(36).slice(2, 8);
+
+function padNum(n: number): string {
+  return String(n).padStart(4, '0');
+}
 
 export function InvoicesProvider({ children }: { children: React.ReactNode }) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
+  const [counter, setCounter] = useState(0);
 
   useEffect(() => {
     (async () => {
       await seedIfEmpty();
       const list = (await storage.get<Invoice[]>(KEY)) ?? [];
       setInvoices(list);
+
+      const stored = await storage.get<number>(COUNTER_KEY);
+      if (stored != null) {
+        setCounter(stored);
+      } else {
+        const maxFromExisting = list.reduce((max, inv) => {
+          if (!inv.invoiceNumber) return max;
+          const n = parseInt(inv.invoiceNumber.replace(/\D/g, ''), 10);
+          return isNaN(n) ? max : Math.max(max, n);
+        }, 0);
+        const derived = Math.max(maxFromExisting, list.length);
+        setCounter(derived);
+        await storage.set(COUNTER_KEY, derived);
+      }
+
       setLoading(false);
     })();
   }, []);
@@ -38,8 +59,16 @@ export function InvoicesProvider({ children }: { children: React.ReactNode }) {
     await storage.set(KEY, list);
   };
 
+  const nextInvoiceNumber = async (currentCounter: number): Promise<[string, number]> => {
+    const next = currentCounter + 1;
+    await storage.set(COUNTER_KEY, next);
+    setCounter(next);
+    return [`INV-${padNum(next)}`, next];
+  };
+
   const addInvoice = async (invoice: Invoice) => {
-    await persist([invoice, ...invoices]);
+    const [invoiceNumber] = await nextInvoiceNumber(counter);
+    await persist([{ ...invoice, invoiceNumber }, ...invoices]);
   };
 
   const updateInvoice = async (id: string, patch: Partial<Invoice>) => {
@@ -57,9 +86,11 @@ export function InvoicesProvider({ children }: { children: React.ReactNode }) {
     const clonedItems: LineItem[] = source.lineItems.map((li) => ({ ...li, id: newId('li') }));
     const newInvoiceId = newId('inv');
     const dueDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+    const [invoiceNumber] = await nextInvoiceNumber(counter);
     const copy: Invoice = {
       ...source,
       id: newInvoiceId,
+      invoiceNumber,
       lineItems: clonedItems,
       dueDate,
       status: 'draft',

@@ -11,6 +11,7 @@ function esc(v: string | number | undefined): string {
 
 export function buildInvoiceCsv(invoices: Invoice[]): string {
   const headers = [
+    "Invoice number",
     "ID",
     "Customer name",
     "Customer email",
@@ -25,6 +26,7 @@ export function buildInvoiceCsv(invoices: Invoice[]): string {
   ];
 
   const rows = invoices.map((inv) => [
+    esc(inv.invoiceNumber),
     esc(inv.id),
     esc(inv.customerName),
     esc(inv.customerEmail),

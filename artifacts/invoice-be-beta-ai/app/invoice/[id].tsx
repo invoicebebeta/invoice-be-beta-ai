@@ -205,6 +205,11 @@ export default function InvoiceDetailScreen() {
               {user?.email ?? ""}
             </Text>
           </View>
+          {invoice.invoiceNumber ? (
+            <View style={[styles.invNumBadge, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+              <Text style={[styles.invNumText, { color: colors.mutedForeground }]}>{invoice.invoiceNumber}</Text>
+            </View>
+          ) : null}
         </View>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12, marginTop: 14 }}>
           <Pressable
@@ -359,6 +364,8 @@ const styles = StyleSheet.create({
   logoFallback: { width: 44, height: 44, borderRadius: 10, alignItems: "center", justifyContent: "center" },
   brandName: { fontFamily: "Inter_700Bold", fontSize: 15 },
   brandEmail: { fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 2 },
+  invNumBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, borderWidth: 1, alignSelf: "flex-start" },
+  invNumText: { fontFamily: "Inter_600SemiBold", fontSize: 11, letterSpacing: 0.5 },
   customerName: { fontFamily: "Inter_700Bold", fontSize: 20 },
   customerEmail: { fontFamily: "Inter_400Regular", fontSize: 13, marginTop: 2 },
   due: { fontFamily: "Inter_500Medium", fontSize: 13, marginTop: 6 },

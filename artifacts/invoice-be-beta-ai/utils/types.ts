@@ -22,6 +22,7 @@ export type InvoiceStatus = 'draft' | 'awaiting_deposit' | 'deposit_paid' | 'ful
 export type Invoice = {
   id: string;
   userId: string;
+  invoiceNumber?: string;
   customerName: string;
   customerEmail: string;
   lineItems: LineItem[];
