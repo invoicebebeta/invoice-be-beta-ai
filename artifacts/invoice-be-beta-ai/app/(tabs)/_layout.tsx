@@ -20,6 +20,10 @@ function NativeTabLayout() {
         <Icon sf={{ default: "plus.circle", selected: "plus.circle.fill" }} />
         <Label>Create</Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="recurring">
+        <Icon sf={{ default: "arrow.clockwise", selected: "arrow.clockwise.circle.fill" }} />
+        <Label>Recurring</Label>
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="profile">
         <Icon sf={{ default: "person", selected: "person.fill" }} />
         <Label>Profile</Label>
@@ -72,6 +76,14 @@ function ClassicTabLayout() {
           title: "Create",
           tabBarIcon: ({ color }) =>
             isIOS ? <SymbolView name="plus.circle.fill" tintColor={color} size={26} /> : <Feather name="plus-circle" size={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="recurring"
+        options={{
+          title: "Recurring",
+          tabBarIcon: ({ color }) =>
+            isIOS ? <SymbolView name="arrow.clockwise" tintColor={color} size={22} /> : <Feather name="repeat" size={22} color={color} />,
         }}
       />
       <Tabs.Screen

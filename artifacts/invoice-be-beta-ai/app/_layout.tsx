@@ -18,6 +18,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { InvoicesProvider } from "@/contexts/InvoicesContext";
 import { ReviewsProvider } from "@/contexts/ReviewsContext";
+import { RecurringProvider } from "@/contexts/RecurringContext";
 import { useColors } from "@/hooks/useColors";
 
 SplashScreen.preventAutoHideAsync();
@@ -54,6 +55,7 @@ function AuthGate() {
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="invoice/[id]" options={{ title: "Invoice" }} />
       <Stack.Screen name="customer/[email]" options={{ title: "Customer" }} />
+      <Stack.Screen name="recurring/[id]" options={{ title: "Recurring template" }} />
       <Stack.Screen name="review/[id]" options={{ title: "Leave a review", presentation: "modal" }} />
     </Stack>
   );
@@ -83,9 +85,11 @@ export default function RootLayout() {
             <KeyboardProvider>
               <AuthProvider>
                 <InvoicesProvider>
-                  <ReviewsProvider>
-                    <AuthGate />
-                  </ReviewsProvider>
+                  <RecurringProvider>
+                    <ReviewsProvider>
+                      <AuthGate />
+                    </ReviewsProvider>
+                  </RecurringProvider>
                 </InvoicesProvider>
               </AuthProvider>
             </KeyboardProvider>

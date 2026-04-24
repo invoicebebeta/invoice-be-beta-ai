@@ -40,6 +40,25 @@ export type Invoice = {
   createdAt: string;
 };
 
+export type RecurringFrequency = 'weekly' | 'biweekly' | 'monthly' | 'quarterly';
+
+export type RecurringTemplate = {
+  id: string;
+  name: string;
+  customerName: string;
+  customerEmail: string;
+  lineItems: LineItem[];
+  requireDeposit: boolean;
+  depositPercent: number;
+  currency: string;
+  notes?: string;
+  frequency: RecurringFrequency;
+  nextDueDate: string;
+  isActive: boolean;
+  createdAt: string;
+  lastGeneratedAt?: string;
+};
+
 export type Review = {
   id: string;
   invoiceId: string;
