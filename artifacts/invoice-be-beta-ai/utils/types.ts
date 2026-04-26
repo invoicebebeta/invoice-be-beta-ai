@@ -14,6 +14,7 @@ export type User = {
   currency?: string;
   logoUri?: string;
   bankDetails?: BankDetails;
+  stripeConnectedAccountId?: string;
 };
 
 export type LineItem = {

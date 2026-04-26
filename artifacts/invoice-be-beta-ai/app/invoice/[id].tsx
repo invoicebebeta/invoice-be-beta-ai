@@ -24,6 +24,7 @@ import {
 } from "@/utils/calculations";
 import { downloadInvoicePdf } from "@/utils/invoicePdf";
 import { generateShareLink } from "@/utils/mockLinks";
+import { createStripeCheckout } from "@/utils/stripeApi";
 
 const NEXT_ACTION: Record<InvoiceStatus, string> = {
   draft: "Send invoice to customer",
@@ -41,6 +42,7 @@ export default function InvoiceDetailScreen() {
   const invoice = getInvoice(String(id));
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [stripeLinkLoading, setStripeLinkLoading] = useState(false);
 
   if (!invoice) {
     return (
@@ -166,6 +168,32 @@ export default function InvoiceDetailScreen() {
     await Clipboard.setStringAsync(link);
     if (Platform.OS !== "web") Haptics.selectionAsync();
     showAlert("Link copied", link);
+  };
+
+  const getStripePaymentLink = async () => {
+    if (!user?.stripeConnectedAccountId) return;
+    setStripeLinkLoading(true);
+    const amountToPay = invoice.status === 'awaiting_deposit'
+      ? invoice.depositAmount
+      : invoice.status === 'deposit_paid'
+        ? invoice.remainingBalance
+        : invoice.total;
+    const result = await createStripeCheckout({
+      userId: user.id,
+      amount: amountToPay,
+      currency: invoice.currency,
+      description: `Invoice ${invoice.invoiceNumber ?? invoice.id} — ${invoice.customerName}`,
+      invoiceRef: invoice.invoiceNumber ?? invoice.id,
+    });
+    setStripeLinkLoading(false);
+    if ('error' in result) {
+      showAlert('Payment link failed', (result as any).error);
+      return;
+    }
+    const { url } = result as { url: string };
+    await Clipboard.setStringAsync(url);
+    haptic();
+    showAlert('Payment link copied', 'The Stripe checkout link has been copied to your clipboard. Share it with your customer to collect payment.');
   };
 
   const showAwaitingBanner = invoice.status === "awaiting_deposit" || invoice.status === "draft" || invoice.status === "deposit_paid";
@@ -331,6 +359,13 @@ export default function InvoiceDetailScreen() {
           <SecondaryButton title="Edit invoice" onPress={() => router.push(`/(tabs)/create?editId=${invoice.id}`)} icon="edit-2" />
         )}
         <SecondaryButton title="Duplicate invoice" onPress={onDuplicate} icon="copy" />
+        {user?.stripeConnectedAccountId && invoice.status !== "fully_paid" && (
+          <SecondaryButton
+            title={stripeLinkLoading ? "Generating link…" : "Get Stripe payment link"}
+            icon="credit-card"
+            onPress={getStripePaymentLink}
+          />
+        )}
         <SecondaryButton
           title={pdfLoading ? "Generating PDF…" : "Download PDF"}
           icon="download"

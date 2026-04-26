@@ -11,6 +11,7 @@ type AuthContextType = {
   updateCurrency: (currency: string) => Promise<void>;
   updateLogo: (logoUri: string | null) => Promise<void>;
   updateBankDetails: (details: BankDetails | null) => Promise<void>;
+  updateStripeAccount: (accountId: string | null) => Promise<void>;
   loading: boolean;
 };
 
@@ -92,9 +93,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await persistUser({ ...user, bankDetails: details ?? undefined });
   };
 
+  const updateStripeAccount = async (accountId: string | null) => {
+    if (!user) return;
+    await persistUser({ ...user, stripeConnectedAccountId: accountId ?? undefined });
+  };
+
   return (
     <AuthContext.Provider
-      value={{ user, signIn, signUp, signOut, updateBusinessName, updateCurrency, updateLogo, updateBankDetails, loading }}
+      value={{ user, signIn, signUp, signOut, updateBusinessName, updateCurrency, updateLogo, updateBankDetails, updateStripeAccount, loading }}
     >
       {children}
     </AuthContext.Provider>
