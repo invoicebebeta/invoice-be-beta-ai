@@ -10,7 +10,7 @@ import {
 
 export function buildInvoiceHtml(
   invoice: Invoice,
-  user: { businessName?: string; email?: string; logoUri?: string } | null
+  user: { businessName?: string; email?: string; logoUri?: string; bankDetails?: { accountHolderName: string; sortCode: string; accountNumber: string; bankName?: string; reference?: string } } | null
 ): string {
   const currency = invoice.currency ?? "USD";
   const subtotal = calculateSubtotal(invoice.lineItems);
@@ -132,6 +132,23 @@ export function buildInvoiceHtml(
       ? `<div style="border:1px solid #e5e7eb;border-radius:8px;padding:16px;background:#f9fafb;margin-bottom:24px;">
       <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#9ca3af;margin-bottom:8px;">Notes & terms</div>
       <div style="font-size:13px;color:#374151;line-height:1.6;">${invoice.notes}</div>
+    </div>`
+      : ""
+  }
+
+  ${
+    user?.bankDetails
+      ? `<div style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:24px;">
+      <div style="background:#f9fafb;padding:10px 16px;border-bottom:1px solid #e5e7eb;">
+        <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#9ca3af;">Bank transfer details</span>
+      </div>
+      <table style="width:100%;border-collapse:collapse;">
+        ${user.bankDetails.bankName ? `<tr style="border-bottom:1px solid #f3f4f6;"><td style="padding:10px 16px;font-size:13px;color:#6b7280;width:40%;">Bank</td><td style="padding:10px 16px;font-size:13px;color:#111827;">${user.bankDetails.bankName}</td></tr>` : ""}
+        <tr style="border-bottom:1px solid #f3f4f6;"><td style="padding:10px 16px;font-size:13px;color:#6b7280;">Account holder</td><td style="padding:10px 16px;font-size:13px;color:#111827;">${user.bankDetails.accountHolderName}</td></tr>
+        <tr style="border-bottom:1px solid #f3f4f6;"><td style="padding:10px 16px;font-size:13px;color:#6b7280;">Sort code</td><td style="padding:10px 16px;font-size:14px;font-weight:700;letter-spacing:0.5px;color:#111827;font-family:monospace;">${user.bankDetails.sortCode}</td></tr>
+        <tr style="border-bottom:${user.bankDetails.reference ? "1px solid #f3f4f6" : "none"};"><td style="padding:10px 16px;font-size:13px;color:#6b7280;">Account number</td><td style="padding:10px 16px;font-size:14px;font-weight:700;letter-spacing:0.5px;color:#111827;font-family:monospace;">${user.bankDetails.accountNumber}</td></tr>
+        ${user.bankDetails.reference ? `<tr><td style="padding:10px 16px;font-size:13px;color:#6b7280;">Reference</td><td style="padding:10px 16px;font-size:13px;color:#111827;">${user.bankDetails.reference}</td></tr>` : ""}
+      </table>
     </div>`
       : ""
   }

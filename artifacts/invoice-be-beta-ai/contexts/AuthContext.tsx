@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { storage } from '../utils/storage';
-import { User } from '../utils/types';
+import { BankDetails, User } from '../utils/types';
 
 type AuthContextType = {
   user: User | null;
@@ -10,6 +10,7 @@ type AuthContextType = {
   updateBusinessName: (name: string) => Promise<void>;
   updateCurrency: (currency: string) => Promise<void>;
   updateLogo: (logoUri: string | null) => Promise<void>;
+  updateBankDetails: (details: BankDetails | null) => Promise<void>;
   loading: boolean;
 };
 
@@ -86,9 +87,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await persistUser({ ...user, logoUri: logoUri ?? undefined });
   };
 
+  const updateBankDetails = async (details: BankDetails | null) => {
+    if (!user) return;
+    await persistUser({ ...user, bankDetails: details ?? undefined });
+  };
+
   return (
     <AuthContext.Provider
-      value={{ user, signIn, signUp, signOut, updateBusinessName, updateCurrency, updateLogo, loading }}
+      value={{ user, signIn, signUp, signOut, updateBusinessName, updateCurrency, updateLogo, updateBankDetails, loading }}
     >
       {children}
     </AuthContext.Provider>

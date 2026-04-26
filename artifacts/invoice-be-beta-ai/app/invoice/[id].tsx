@@ -275,6 +275,23 @@ export default function InvoiceDetailScreen() {
         </>
       ) : null}
 
+      {user?.bankDetails && (
+        <>
+          <Text style={[styles.section, { color: colors.mutedForeground, marginTop: 20 }]}>Bank transfer details</Text>
+          <View style={[styles.bankCard, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
+            {user.bankDetails.bankName ? (
+              <BankRow label="Bank" value={user.bankDetails.bankName} />
+            ) : null}
+            <BankRow label="Account holder" value={user.bankDetails.accountHolderName} />
+            <BankRow label="Sort code" value={user.bankDetails.sortCode} mono />
+            <BankRow label="Account number" value={user.bankDetails.accountNumber} mono />
+            {user.bankDetails.reference ? (
+              <BankRow label="Reference" value={user.bankDetails.reference} last />
+            ) : null}
+          </View>
+        </>
+      )}
+
       {(invoice.depositLink || invoice.finalLink) && (
         <>
           <Text style={[styles.section, { color: colors.mutedForeground, marginTop: 20 }]}>Shareable links</Text>
@@ -334,6 +351,16 @@ export default function InvoiceDetailScreen() {
   );
 }
 
+function BankRow({ label, value, mono, last }: { label: string; value: string; mono?: boolean; last?: boolean }) {
+  const colors = useColors();
+  return (
+    <View style={[styles.bankRow, { borderBottomWidth: last ? 0 : StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}>
+      <Text style={[styles.bankLabel, { color: colors.mutedForeground }]}>{label}</Text>
+      <Text style={[mono ? styles.bankValueMono : styles.bankValue, { color: colors.foreground }]}>{value}</Text>
+    </View>
+  );
+}
+
 function LinkRow({ label, value, onCopy }: { label: string; value: string; onCopy: (v: string) => void }) {
   const colors = useColors();
   return (
@@ -371,6 +398,11 @@ const styles = StyleSheet.create({
   due: { fontFamily: "Inter_500Medium", fontSize: 13, marginTop: 6 },
   notesCard: { padding: 16, borderWidth: 1 },
   notesText: { fontFamily: "Inter_400Regular", fontSize: 14, lineHeight: 21 },
+  bankCard: { borderWidth: 1, overflow: "hidden" },
+  bankRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12 },
+  bankLabel: { fontFamily: "Inter_500Medium", fontSize: 13 },
+  bankValue: { fontFamily: "Inter_500Medium", fontSize: 13 },
+  bankValueMono: { fontFamily: "Inter_700Bold", fontSize: 14, letterSpacing: 0.5 },
   section: { fontFamily: "Inter_600SemiBold", fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 },
   itemsCard: { borderWidth: 1, paddingHorizontal: 16 },
   itemRow: { flexDirection: "row", alignItems: "flex-start", paddingVertical: 14 },

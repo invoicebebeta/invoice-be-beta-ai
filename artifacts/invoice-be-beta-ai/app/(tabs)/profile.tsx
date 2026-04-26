@@ -13,13 +13,14 @@ import { StarRating } from "@/components/StarRating";
 import { EmptyState } from "@/components/EmptyState";
 import { CurrencyPicker } from "@/components/CurrencyPicker";
 import { LogoPicker } from "@/components/LogoPicker";
+import { BankDetailsForm } from "@/components/BankDetailsForm";
 import { useInvoices } from "@/contexts/InvoicesContext";
 import { exportInvoicesCsv } from "@/utils/exportCsv";
 
 export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, signOut, updateBusinessName, updateCurrency, updateLogo } = useAuth();
+  const { user, signOut, updateBusinessName, updateCurrency, updateLogo, updateBankDetails } = useAuth();
   const { reviews, averageRating } = useReviews();
   const { invoices } = useInvoices();
   const [csvLoading, setCsvLoading] = useState(false);
@@ -81,6 +82,11 @@ export default function ProfileScreen() {
             businessName={user?.businessName ?? ""}
             onChange={updateLogo}
           />
+        </View>
+
+        <Text style={[styles.section, { color: colors.mutedForeground }]}>Payment details</Text>
+        <View style={{ marginBottom: 24 }}>
+          <BankDetailsForm value={user?.bankDetails} onChange={updateBankDetails} />
         </View>
 
         <Text style={[styles.section, { color: colors.mutedForeground }]}>Currency</Text>

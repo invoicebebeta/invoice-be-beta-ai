@@ -1,3 +1,11 @@
+export type BankDetails = {
+  accountHolderName: string;
+  sortCode: string;
+  accountNumber: string;
+  bankName?: string;
+  reference?: string;
+};
+
 export type User = {
   id: string;
   email: string;
@@ -5,6 +13,7 @@ export type User = {
   businessName: string;
   currency?: string;
   logoUri?: string;
+  bankDetails?: BankDetails;
 };
 
 export type LineItem = {
