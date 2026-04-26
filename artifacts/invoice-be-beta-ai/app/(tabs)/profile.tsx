@@ -65,9 +65,17 @@ export default function ProfileScreen() {
   const handleConnectStripe = async () => {
     if (!user) return;
     setStripeLoading(true);
+
+    let win: Window | null = null;
+    if (Platform.OS === 'web') {
+      win = window.open('', '_blank');
+    }
+
     const result = await getStripeConnectUrl(user.id);
     setStripeLoading(false);
+
     if ('error' in result) {
+      if (win) win.close();
       const msg = (result as any).error as string;
       if (msg.includes('client_id not configured')) {
         showAlert(
@@ -79,8 +87,13 @@ export default function ProfileScreen() {
       }
       return;
     }
+
     if (Platform.OS === 'web') {
-      window.open(result.url, '_blank');
+      if (win) {
+        win.location.href = result.url;
+      } else {
+        window.open(result.url, '_blank');
+      }
     } else {
       Linking.openURL(result.url);
     }
