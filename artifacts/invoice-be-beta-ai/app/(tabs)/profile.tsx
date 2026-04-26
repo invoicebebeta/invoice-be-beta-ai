@@ -79,7 +79,11 @@ export default function ProfileScreen() {
       }
       return;
     }
-    Linking.openURL(result.url);
+    if (Platform.OS === 'web') {
+      window.open(result.url, '_blank');
+    } else {
+      Linking.openURL(result.url);
+    }
   };
 
   const handleDisconnectStripe = () => {
