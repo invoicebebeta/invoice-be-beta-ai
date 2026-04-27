@@ -172,17 +172,44 @@ function buildConfirmationEmail(p: SendPaymentConfirmationParams): string {
 </html>`;
 }
 
+function buildInvoiceText(p: SendInvoiceParams): string {
+  const ref = p.invoiceNumber ?? p.invoiceId;
+  const lines: string[] = [
+    `Invoice ${ref} from ${p.fromBusinessName}`,
+    `Due: ${formatDate(p.dueDate)}`,
+    '',
+    'Items:',
+    ...p.lineItems.map(i => `  ${i.name} x${i.quantity} — ${formatMoney(i.price * i.quantity, p.currency)}`),
+    '',
+    `Total: ${formatMoney(p.total, p.currency)}`,
+  ];
+  if (p.depositAmount && p.depositAmount > 0 && p.status === 'awaiting_deposit') {
+    lines.push(`Deposit due: ${formatMoney(p.depositAmount, p.currency)}`);
+  }
+  if (p.paymentLink) {
+    lines.push('', `Pay online: ${p.paymentLink}`);
+  }
+  if (p.notes) {
+    lines.push('', `Notes: ${p.notes}`);
+  }
+  lines.push('', `Sent by ${p.fromBusinessName} — ${p.fromEmail}`);
+  return lines.join('\n');
+}
+
 export async function sendInvoiceEmail(p: SendInvoiceParams): Promise<void> {
   const resend = getResend();
   const ref = p.invoiceNumber ?? p.invoiceId;
   const subject = `Invoice ${ref} from ${p.fromBusinessName}`;
   const html = buildInvoiceEmail(p);
+  const text = buildInvoiceText(p);
 
   const { data, error } = await resend.emails.send({
     from: `${p.fromBusinessName} <invoices@invoicebebeta.com>`,
+    reply_to: p.fromEmail,
     to: [p.toEmail],
     subject,
     html,
+    text,
   });
 
   if (error) {
@@ -223,11 +250,14 @@ export async function sendReviewRequestEmail(
 </body>
 </html>`;
 
+  const text = `Hi ${toName},\n\nThank you for working with ${businessName}! It would mean a lot if you could take a moment to leave a review.\n\nLeave a review: ${reviewUrl}\n\nOnly takes a minute — we really appreciate it.\n\nSent by ${businessName} via Invoice Be Beta`;
+
   const { error } = await resend.emails.send({
     from: `${businessName} <invoices@invoicebebeta.com>`,
     to: [toEmail],
     subject: `How was your experience with ${businessName}?`,
     html,
+    text,
   });
 
   if (error) {
@@ -261,11 +291,14 @@ export async function sendPasswordResetEmail(toEmail: string, resetUrl: string):
 </body>
 </html>`;
 
+  const text = `Reset your Invoice Be Beta password\n\nWe received a request to reset the password for your account. Click the link below to choose a new password:\n\n${resetUrl}\n\nThis link expires in 1 hour. If you did not request a password reset, you can ignore this email — your account is safe.\n\nInvoice Be Beta`;
+
   const { error } = await resend.emails.send({
     from: 'Invoice Be Beta <hello@invoicebebeta.com>',
     to: [toEmail],
     subject: 'Reset your Invoice Be Beta password',
     html,
+    text,
   });
 
   if (error) {
@@ -282,11 +315,16 @@ export async function sendPaymentConfirmationEmail(p: SendPaymentConfirmationPar
   const subject = `${p.fromBusinessName}: ${label} for invoice ${ref}`;
   const html = buildConfirmationEmail(p);
 
+  const paymentLabel = p.paymentType === 'deposit' ? 'Deposit payment received' : 'Payment received in full';
+  const text = `${paymentLabel}\n\nAmount paid: ${formatMoney(p.amountPaid, p.currency)}\nInvoice ref: ${ref}\n\nThank you for your payment.\n\nFrom ${p.fromBusinessName}`;
+
   const { data, error } = await resend.emails.send({
     from: `${p.fromBusinessName} <invoices@invoicebebeta.com>`,
+    reply_to: p.fromEmail,
     to: [p.toEmail],
     subject,
     html,
+    text,
   });
 
   if (error) {
