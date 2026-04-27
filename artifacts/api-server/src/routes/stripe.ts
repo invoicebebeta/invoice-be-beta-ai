@@ -1,5 +1,6 @@
-import { Router, type IRouter } from 'express';
+import { Router, type IRouter, type Request } from 'express';
 import { getUncachableStripeClient } from '../stripeClient';
+import { logger } from '../lib/logger';
 import {
   getConnectedAccount,
   upsertConnectedAccount,
@@ -24,26 +25,34 @@ router.get('/stripe/connect/url', async (req, res) => {
 });
 
 router.get('/stripe/connect/callback', async (req, res) => {
-  const { code, state, error } = req.query as Record<string, string>;
+  const { code, state, error, error_description } = req.query as Record<string, string>;
+  logger.info({ query: req.query }, 'Stripe Connect callback received');
+
   if (error) {
-    return res.status(400).send(htmlPage('Connection cancelled', `Stripe returned: ${error}`, false));
+    const detail = error_description ? `${error}: ${error_description}` : error;
+    logger.warn({ error, error_description }, 'Stripe Connect OAuth error');
+    return res.status(400).send(htmlPage('Connection failed', `Stripe error: ${detail}`, false));
   }
   if (!code || !state) {
-    return res.status(400).send(htmlPage('Invalid request', 'Missing code or state.', false));
+    logger.warn({ hasCode: !!code, hasState: !!state }, 'Missing code or state in callback');
+    return res.status(400).send(htmlPage('Invalid request', 'Missing code or state parameter from Stripe.', false));
   }
   let userId: string;
   try {
     userId = JSON.parse(Buffer.from(state, 'base64url').toString()).userId;
-  } catch {
+  } catch (e) {
+    logger.error({ state, err: e }, 'Could not parse state parameter');
     return res.status(400).send(htmlPage('Invalid state', 'Could not parse state parameter.', false));
   }
   try {
     const stripe = await getUncachableStripeClient();
     const response = await (stripe as any).oauth.token({ grant_type: 'authorization_code', code });
     const accountId: string = response.stripe_user_id;
+    logger.info({ userId, accountId }, 'Stripe account connected successfully');
     await upsertConnectedAccount(userId, accountId);
     res.send(htmlPage('Stripe connected!', 'Your Stripe account has been connected successfully. Return to the app to continue.', true));
   } catch (err: any) {
+    logger.error({ err: err.message }, 'OAuth token exchange failed');
     res.status(500).send(htmlPage('Connection failed', err.message ?? 'An error occurred.', false));
   }
 });
