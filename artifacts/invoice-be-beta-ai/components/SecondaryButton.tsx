@@ -43,5 +43,5 @@ export function SecondaryButton({ title, onPress, disabled, icon, style, variant
 const styles = StyleSheet.create({
   btn: { paddingVertical: 12, paddingHorizontal: 16, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  text: { fontFamily: 'Inter_500Medium', fontSize: 14 },
+  text: { fontFamily: 'Inter_500Medium', fontSize: 14, textAlign: 'center' },
 });
