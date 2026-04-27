@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Alert, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Linking, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "expo-router";
+import * as Clipboard from "expo-clipboard";
 
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/contexts/AuthContext";
@@ -22,12 +23,13 @@ import {
   getStripeConnectStatus,
   getStripeConnectUrl,
 } from "@/utils/stripeApi";
+import { getReviewPageUrl } from "@/utils/reviewApi";
 
 export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user, signOut, updateBusinessName, updateCurrency, updateLogo, updateBankDetails, updateStripeAccount } = useAuth();
-  const { reviews, averageRating } = useReviews();
+  const { reviews, averageRating, refreshReviews } = useReviews();
   const { invoices } = useInvoices();
   const [csvLoading, setCsvLoading] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -59,8 +61,25 @@ export default function ProfileScreen() {
   useFocusEffect(
     useCallback(() => {
       refreshStripeStatus();
-    }, [refreshStripeStatus])
+      refreshReviews();
+    }, [refreshStripeStatus, refreshReviews])
   );
+
+  const handleShareReviewPage = async () => {
+    if (!user) return;
+    const url = getReviewPageUrl(user.id);
+    if (Platform.OS === 'web') {
+      await navigator.clipboard.writeText(url).catch(() => {});
+      window.alert(`Review page link copied!\n\n${url}`);
+      return;
+    }
+    try {
+      await Share.share({ message: `Leave ${user.businessName} a review: ${url}`, url });
+    } catch {
+      await Clipboard.setStringAsync(url);
+      Alert.alert("Review page link copied", "Share this with your customers to collect reviews.");
+    }
+  };
 
   const handleConnectStripe = async () => {
     if (!user) return;
@@ -236,14 +255,28 @@ export default function ProfileScreen() {
           </Text>
         </View>
 
-        <Text style={[styles.section, { color: colors.mutedForeground }]}>Reviews</Text>
+        <View style={[styles.reviewsHeader]}>
+          <Text style={[styles.section, { color: colors.mutedForeground, marginBottom: 0, flex: 1 }]}>Reviews</Text>
+          <Pressable
+            onPress={handleShareReviewPage}
+            style={({ pressed }) => [styles.shareBtn, { borderColor: colors.primary, opacity: pressed ? 0.7 : 1 }]}
+          >
+            <Feather name="share-2" size={13} color={colors.primary} />
+            <Text style={[styles.shareBtnText, { color: colors.primary }]}>Share your review page</Text>
+          </Pressable>
+        </View>
         {reviews.length === 0 ? (
-          <EmptyState icon="message-square" title="No reviews yet" description="Reviews appear here after your customers leave feedback." />
+          <EmptyState icon="message-square" title="No reviews yet" description="Share your review page link with customers to collect feedback." />
         ) : (
           reviews.map((r) => (
             <View key={r.id} style={[styles.reviewCard, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
               <View style={styles.reviewHeader}>
-                <StarRating value={r.rating} size={16} readOnly />
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <StarRating value={r.rating} size={16} readOnly />
+                  {r.customerName ? (
+                    <Text style={[styles.reviewCustomer, { color: colors.foreground }]}>{r.customerName}</Text>
+                  ) : null}
+                </View>
                 <Text style={[styles.reviewDate, { color: colors.mutedForeground }]}>
                   {new Date(r.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
                 </Text>
@@ -301,8 +334,12 @@ const styles = StyleSheet.create({
   stripeDivider: { borderTopWidth: StyleSheet.hairlineWidth },
   stripeBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 13, paddingHorizontal: 16 },
   stripeBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
+  reviewsHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
+  shareBtn: { flexDirection: "row", alignItems: "center", gap: 5, paddingVertical: 5, paddingHorizontal: 10, borderRadius: 8, borderWidth: 1 },
+  shareBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 12 },
   reviewCard: { padding: 14, borderWidth: 1, marginBottom: 10 },
   reviewHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
+  reviewCustomer: { fontFamily: "Inter_600SemiBold", fontSize: 13 },
   reviewDate: { fontFamily: "Inter_500Medium", fontSize: 12 },
   reviewText: { fontFamily: "Inter_400Regular", fontSize: 14, lineHeight: 20 },
 });

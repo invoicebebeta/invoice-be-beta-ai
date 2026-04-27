@@ -25,6 +25,8 @@ import {
 import { downloadInvoicePdf } from "@/utils/invoicePdf";
 import { createStripeCheckout } from "@/utils/stripeApi";
 import { sendInvoiceEmail } from "@/utils/emailApi";
+import { getReviewPageUrl, sendReviewRequestEmail } from "@/utils/reviewApi";
+import * as Sharing from "expo-sharing";
 
 const NEXT_ACTION: Record<InvoiceStatus, string> = {
   draft: "Send invoice to customer",
@@ -44,6 +46,7 @@ export default function InvoiceDetailScreen() {
   const [pdfLoading, setPdfLoading] = useState(false);
   const [stripeLinkLoading, setStripeLinkLoading] = useState(false);
   const [emailLoading, setEmailLoading] = useState(false);
+  const [reviewEmailLoading, setReviewEmailLoading] = useState(false);
 
   if (!invoice) {
     return (
@@ -152,7 +155,7 @@ export default function InvoiceDetailScreen() {
     await updateInvoice(invoice.id, { status: "fully_paid" });
     setPendingAction(null);
     haptic();
-    router.push(`/review/${invoice.id}`);
+    showAlert("Invoice paid in full", "You can now email a review request to your customer or share the review link.");
   };
 
   const payRemaining = async () => {
@@ -162,7 +165,7 @@ export default function InvoiceDetailScreen() {
     if (r.success) {
       await updateInvoice(invoice.id, { status: "fully_paid" });
       haptic("success");
-      router.push(`/review/${invoice.id}`);
+      showAlert("Payment received", `${formatMoney(invoice.remainingBalance, invoice.currency)} received. You can now request a review from ${invoice.customerName}.`);
     } else {
       haptic("warning");
       showAlert("Payment failed", "The simulated payment failed. Try again.");
@@ -240,6 +243,38 @@ export default function InvoiceDetailScreen() {
     await Clipboard.setStringAsync(url);
     haptic();
     showAlert('Payment link copied', 'A fresh Stripe checkout link has been generated and copied to your clipboard.');
+  };
+
+  const handleShareReviewLink = async () => {
+    if (!user) return;
+    const url = getReviewPageUrl(user.id, invoice.customerName, invoice.invoiceNumber);
+    const canShare = await Sharing.isAvailableAsync();
+    if (canShare) {
+      try {
+        await Sharing.shareAsync(url, { dialogTitle: `Share review link with ${invoice.customerName}` });
+        return;
+      } catch {}
+    }
+    await Clipboard.setStringAsync(url);
+    if (Platform.OS !== "web") Haptics.selectionAsync();
+    showAlert("Review link copied", `Share this link with ${invoice.customerName} so they can leave you a review.`);
+  };
+
+  const handleEmailReviewRequest = async () => {
+    if (!user || !invoice.customerEmail) {
+      showAlert("Missing email", "This invoice doesn't have a customer email address.");
+      return;
+    }
+    setReviewEmailLoading(true);
+    const url = getReviewPageUrl(user.id, invoice.customerName, invoice.invoiceNumber);
+    const result = await sendReviewRequestEmail(invoice.customerEmail, invoice.customerName, user.businessName, url);
+    setReviewEmailLoading(false);
+    haptic();
+    if (result.ok) {
+      showAlert("Review request sent", `An email has been sent to ${invoice.customerEmail} with a link to leave you a review.`);
+    } else {
+      showAlert("Failed to send email", result.error ?? "Something went wrong.");
+    }
   };
 
   const handleEmailInvoice = async () => {
@@ -416,7 +451,20 @@ export default function InvoiceDetailScreen() {
           </>
         )}
         {invoice.status === "fully_paid" && (
-          <PrimaryButton title="Leave a review" onPress={() => router.push(`/review/${invoice.id}`)} icon="star" variant="success" />
+          <>
+            <PrimaryButton
+              title={reviewEmailLoading ? "Sending request…" : `Email review request to ${invoice.customerName}`}
+              onPress={handleEmailReviewRequest}
+              icon="send"
+              variant="success"
+              loading={reviewEmailLoading}
+            />
+            <SecondaryButton
+              title="Share review link"
+              onPress={handleShareReviewLink}
+              icon="share-2"
+            />
+          </>
         )}
         <SecondaryButton title="Edit invoice" onPress={() => router.push(`/(tabs)/create?editId=${invoice.id}`)} icon="edit-2" />
         <SecondaryButton title="Duplicate invoice" onPress={onDuplicate} icon="copy" />

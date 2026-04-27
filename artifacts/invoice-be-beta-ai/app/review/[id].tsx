@@ -6,11 +6,9 @@ import * as Haptics from "expo-haptics";
 import { useColors } from "@/hooks/useColors";
 import { useInvoices } from "@/contexts/InvoicesContext";
 import { useReviews } from "@/contexts/ReviewsContext";
-import { useAuth } from "@/contexts/AuthContext";
 import { StarRating } from "@/components/StarRating";
 import { TextField } from "@/components/TextField";
 import { PrimaryButton } from "@/components/PrimaryButton";
-import { Review } from "@/utils/types";
 
 export default function ReviewScreen() {
   const colors = useColors();
@@ -18,7 +16,6 @@ export default function ReviewScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { getInvoice } = useInvoices();
   const { addReview } = useReviews();
-  const { user } = useAuth();
   const [rating, setRating] = useState(5);
   const [text, setText] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -28,15 +25,13 @@ export default function ReviewScreen() {
   const onSubmit = async () => {
     if (!text.trim()) return;
     setSubmitting(true);
-    const review: Review = {
-      id: "rv_" + Date.now().toString() + Math.random().toString(36).slice(2, 8),
+    const result = await addReview({
       invoiceId: String(id),
-      userId: user?.id ?? invoice?.userId ?? "anonymous",
+      customerName: invoice?.customerName,
+      invoiceRef: invoice?.invoiceNumber,
       rating,
       text: text.trim(),
-      createdAt: new Date().toISOString(),
-    };
-    await addReview(review);
+    });
     if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setSubmitting(false);
     router.back();
@@ -46,7 +41,7 @@ export default function ReviewScreen() {
     <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: 24 }} keyboardShouldPersistTaps="handled">
       <Text style={[styles.title, { color: colors.foreground }]}>How was the work?</Text>
       <Text style={[styles.sub, { color: colors.mutedForeground }]}>
-        Your review helps {invoice?.customerName ? `${invoice.customerName} and others` : "future customers"} learn about your business.
+        {invoice?.customerName ? `Add a review from ${invoice.customerName}.` : "Add a review from your customer."}
       </Text>
 
       <View style={styles.starsWrap}>
@@ -54,7 +49,7 @@ export default function ReviewScreen() {
       </View>
 
       <TextField
-        label="Your review"
+        label="Review"
         placeholder="Share what made the experience great..."
         value={text}
         onChangeText={setText}
@@ -63,7 +58,7 @@ export default function ReviewScreen() {
         style={{ minHeight: 120, textAlignVertical: "top", paddingTop: 12 }}
       />
 
-      <PrimaryButton title="Submit review" onPress={onSubmit} loading={submitting} icon="check" disabled={!text.trim()} />
+      <PrimaryButton title="Save review" onPress={onSubmit} loading={submitting} icon="check" disabled={!text.trim()} />
     </ScrollView>
   );
 }

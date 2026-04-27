@@ -86,6 +86,59 @@ export async function markResetTokenUsed(token: string): Promise<void> {
   await getPool().query('UPDATE password_reset_tokens SET used = TRUE WHERE token = $1', [token]);
 }
 
+export async function ensureReviewsTable(): Promise<void> {
+  const client = await getPool().connect();
+  try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS reviews (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        customer_name TEXT,
+        invoice_ref TEXT,
+        rating INTEGER NOT NULL,
+        text TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+  } finally {
+    client.release();
+  }
+}
+
+export type DbReview = {
+  id: string;
+  user_id: string;
+  customer_name: string | null;
+  invoice_ref: string | null;
+  rating: number;
+  text: string;
+  created_at: Date;
+};
+
+export async function insertReview(
+  id: string,
+  userId: string,
+  customerName: string | null,
+  invoiceRef: string | null,
+  rating: number,
+  text: string
+): Promise<void> {
+  await getPool().query(
+    `INSERT INTO reviews (id, user_id, customer_name, invoice_ref, rating, text)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     ON CONFLICT (id) DO NOTHING`,
+    [id, userId, customerName || null, invoiceRef || null, rating, text]
+  );
+}
+
+export async function getReviewsByUserId(userId: string): Promise<DbReview[]> {
+  const r = await getPool().query(
+    'SELECT * FROM reviews WHERE user_id = $1 ORDER BY created_at DESC',
+    [userId]
+  );
+  return r.rows;
+}
+
 export async function ensureConnectedAccountsTable(): Promise<void> {
   const client = await getPool().connect();
   try {

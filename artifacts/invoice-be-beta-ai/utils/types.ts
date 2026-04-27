@@ -75,4 +75,5 @@ export type Review = {
   rating: number;
   text: string;
   createdAt: string;
+  customerName?: string;
 };

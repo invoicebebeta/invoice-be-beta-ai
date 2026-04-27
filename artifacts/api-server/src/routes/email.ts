@@ -1,6 +1,6 @@
 import { Router, type IRouter } from 'express';
 import { logger } from '../lib/logger';
-import { sendInvoiceEmail, sendPaymentConfirmationEmail } from '../emailService';
+import { sendInvoiceEmail, sendPaymentConfirmationEmail, sendReviewRequestEmail } from '../emailService';
 
 const router: IRouter = Router();
 
@@ -84,6 +84,20 @@ router.post('/email/send-confirmation', async (req, res) => {
     res.json({ ok: true });
   } catch (err: any) {
     logger.error({ err: err.message }, 'Failed to send confirmation email');
+    res.status(500).json({ error: err.message ?? 'Failed to send email.' });
+  }
+});
+
+router.post('/email/send-review-request', async (req, res) => {
+  const { toEmail, toName, businessName, reviewUrl } = req.body;
+  if (!toEmail || !businessName || !reviewUrl) {
+    return res.status(400).json({ error: 'Missing required fields: toEmail, businessName, reviewUrl' });
+  }
+  try {
+    await sendReviewRequestEmail(toEmail, toName ?? toEmail, businessName, reviewUrl);
+    res.json({ ok: true });
+  } catch (err: any) {
+    logger.error({ err: err.message }, 'Failed to send review request email');
     res.status(500).json({ error: err.message ?? 'Failed to send email.' });
   }
 });

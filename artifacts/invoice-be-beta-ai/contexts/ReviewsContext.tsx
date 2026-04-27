@@ -1,16 +1,29 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { storage } from '../utils/storage';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { Review } from '../utils/types';
 import { useAuth } from './AuthContext';
+import { fetchReviews, submitReview, RemoteReview } from '../utils/reviewApi';
 
 type ReviewsContextType = {
   reviews: Review[];
   loading: boolean;
-  addReview: (review: Review) => Promise<void>;
+  addReview: (params: { invoiceId: string; customerName?: string; invoiceRef?: string; rating: number; text: string }) => Promise<{ ok: boolean; error?: string }>;
+  refreshReviews: () => Promise<void>;
   averageRating: number;
 };
 
 const ReviewsContext = createContext<ReviewsContextType | null>(null);
+
+function remoteToReview(r: RemoteReview): Review {
+  return {
+    id: r.id,
+    invoiceId: r.invoice_ref ?? '',
+    userId: r.user_id,
+    rating: r.rating,
+    text: r.text,
+    createdAt: r.created_at,
+    customerName: r.customer_name ?? undefined,
+  };
+}
 
 export function ReviewsProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -19,26 +32,41 @@ export function ReviewsProvider({ children }: { children: React.ReactNode }) {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!userId) {
       setReviews([]);
       setLoading(false);
       return;
     }
-
     setLoading(true);
-    (async () => {
-      const existing = (await storage.get<Review[]>(`reviews_${userId}`)) ?? [];
-      setReviews(existing);
-      setLoading(false);
-    })();
+    const remote = await fetchReviews(userId);
+    setReviews(remote.map(remoteToReview));
+    setLoading(false);
   }, [userId]);
 
-  const addReview = async (review: Review) => {
-    if (!userId) return;
-    const next = [review, ...reviews];
-    setReviews(next);
-    await storage.set(`reviews_${userId}`, next);
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const addReview = async (params: {
+    invoiceId: string;
+    customerName?: string;
+    invoiceRef?: string;
+    rating: number;
+    text: string;
+  }): Promise<{ ok: boolean; error?: string }> => {
+    if (!userId) return { ok: false, error: 'Not signed in' };
+    const result = await submitReview(
+      userId,
+      params.customerName ?? null,
+      params.invoiceRef ?? null,
+      params.rating,
+      params.text
+    );
+    if (result.ok) {
+      await load();
+    }
+    return result;
   };
 
   const averageRating = useMemo(() => {
@@ -47,7 +75,7 @@ export function ReviewsProvider({ children }: { children: React.ReactNode }) {
   }, [reviews]);
 
   return (
-    <ReviewsContext.Provider value={{ reviews, loading, addReview, averageRating }}>
+    <ReviewsContext.Provider value={{ reviews, loading, addReview, refreshReviews: load, averageRating }}>
       {children}
     </ReviewsContext.Provider>
   );
