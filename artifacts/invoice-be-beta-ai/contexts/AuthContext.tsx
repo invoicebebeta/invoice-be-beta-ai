@@ -26,7 +26,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     (async () => {
       const stored = await storage.get<User>(CURRENT_KEY);
-      if (stored) setUser({ currency: 'USD', ...stored });
+      if (stored) {
+        setUser({ currency: 'USD', ...stored });
+        if (stored.logoUri) apiUpdateLogo(stored.id, stored.logoUri);
+      }
       setLoading(false);
     })();
   }, []);
