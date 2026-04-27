@@ -52,5 +52,5 @@ export function PrimaryButton({ title, onPress, loading, disabled, icon, variant
 const styles = StyleSheet.create({
   btn: { paddingVertical: 14, paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  text: { fontFamily: 'Inter_600SemiBold', fontSize: 15 },
+  text: { fontFamily: 'Inter_600SemiBold', fontSize: 15, textAlign: 'center' },
 });

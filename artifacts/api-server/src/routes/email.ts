@@ -1,6 +1,7 @@
 import { Router, type IRouter } from 'express';
 import { logger } from '../lib/logger';
 import { sendInvoiceEmail, sendPaymentConfirmationEmail, sendReviewRequestEmail } from '../emailService';
+import { findUserById } from '../connectDb';
 
 const router: IRouter = Router();
 
@@ -10,7 +11,7 @@ router.post('/email/send-invoice', async (req, res) => {
     toName,
     fromBusinessName,
     fromEmail,
-    fromLogoData,
+    fromUserId,
     invoiceNumber,
     invoiceId,
     lineItems,
@@ -29,12 +30,13 @@ router.post('/email/send-invoice', async (req, res) => {
   }
 
   try {
+    const senderUser = fromUserId ? await findUserById(fromUserId) : null;
     await sendInvoiceEmail({
       toEmail,
       toName: toName ?? toEmail,
       fromBusinessName,
       fromEmail: fromEmail ?? 'noreply@invoicebeta.app',
-      fromLogoData: fromLogoData ?? undefined,
+      fromLogoData: senderUser?.logo_data ?? undefined,
       invoiceNumber,
       invoiceId,
       lineItems,

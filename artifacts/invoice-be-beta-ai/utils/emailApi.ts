@@ -29,7 +29,7 @@ export async function sendInvoiceEmail(
         toName: invoice.customerName,
         fromBusinessName: user.businessName,
         fromEmail: user.email,
-        fromLogoData: user.logoUri,
+        fromUserId: user.id,
         invoiceNumber: invoice.invoiceNumber,
         invoiceId: invoice.id,
         lineItems: invoice.lineItems.map((li) => ({
