@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { storage } from '../utils/storage';
 import { Review } from '../utils/types';
+import { useAuth } from './AuthContext';
 
 type ReviewsContextType = {
   reviews: Review[];
@@ -10,48 +11,34 @@ type ReviewsContextType = {
 };
 
 const ReviewsContext = createContext<ReviewsContextType | null>(null);
-const KEY = 'reviews';
-
-const seed: Review[] = [
-  {
-    id: 'rv_seed_1',
-    invoiceId: 'inv_4',
-    userId: 'mock_user_1',
-    rating: 5,
-    text: 'Outstanding work — clear communication and delivered ahead of schedule.',
-    createdAt: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'rv_seed_2',
-    invoiceId: 'inv_old',
-    userId: 'mock_user_1',
-    rating: 4,
-    text: 'Great experience overall. Would hire again.',
-    createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-];
 
 export function ReviewsProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
+
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!userId) {
+      setReviews([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
     (async () => {
-      const existing = await storage.get<Review[]>(KEY);
-      if (!existing) {
-        await storage.set(KEY, seed);
-        setReviews(seed);
-      } else {
-        setReviews(existing);
-      }
+      const existing = (await storage.get<Review[]>(`reviews_${userId}`)) ?? [];
+      setReviews(existing);
       setLoading(false);
     })();
-  }, []);
+  }, [userId]);
 
   const addReview = async (review: Review) => {
+    if (!userId) return;
     const next = [review, ...reviews];
     setReviews(next);
-    await storage.set(KEY, next);
+    await storage.set(`reviews_${userId}`, next);
   };
 
   const averageRating = useMemo(() => {

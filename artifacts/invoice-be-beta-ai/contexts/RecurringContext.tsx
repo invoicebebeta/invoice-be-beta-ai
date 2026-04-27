@@ -2,8 +2,8 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { storage } from '../utils/storage';
 import { Invoice, LineItem, RecurringFrequency, RecurringTemplate } from '../utils/types';
 import { calculateDeposit, calculateRemaining, calculateTotal } from '../utils/calculations';
+import { useAuth } from './AuthContext';
 
-const KEY = 'recurring_templates';
 const newId = (p: string) => p + '_' + Date.now().toString() + Math.random().toString(36).slice(2, 8);
 
 export function advanceDueDate(current: string, frequency: RecurringFrequency): string {
@@ -31,20 +31,31 @@ type RecurringContextType = {
 const RecurringContext = createContext<RecurringContextType | null>(null);
 
 export function RecurringProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
+
   const [templates, setTemplates] = useState<RecurringTemplate[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!userId) {
+      setTemplates([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
     (async () => {
-      const list = (await storage.get<RecurringTemplate[]>(KEY)) ?? [];
+      const list = (await storage.get<RecurringTemplate[]>(`recurring_templates_${userId}`)) ?? [];
       setTemplates(list);
       setLoading(false);
     })();
-  }, []);
+  }, [userId]);
 
   const persist = async (list: RecurringTemplate[]) => {
+    if (!userId) return;
     setTemplates(list);
-    await storage.set(KEY, list);
+    await storage.set(`recurring_templates_${userId}`, list);
   };
 
   const addTemplate = async (t: RecurringTemplate) => {
@@ -61,7 +72,7 @@ export function RecurringProvider({ children }: { children: React.ReactNode }) {
 
   const getTemplate = (id: string) => templates.find((t) => t.id === id);
 
-  const buildInvoice = (templateId: string, userId: string): Invoice | null => {
+  const buildInvoice = (templateId: string, uid: string): Invoice | null => {
     const tmpl = templates.find((t) => t.id === templateId);
     if (!tmpl) return null;
     const clonedItems: LineItem[] = tmpl.lineItems.map((li) => ({ ...li, id: newId('li') }));
@@ -71,7 +82,7 @@ export function RecurringProvider({ children }: { children: React.ReactNode }) {
     const id = newId('inv');
     return {
       id,
-      userId,
+      userId: uid,
       customerName: tmpl.customerName,
       customerEmail: tmpl.customerEmail,
       lineItems: clonedItems,

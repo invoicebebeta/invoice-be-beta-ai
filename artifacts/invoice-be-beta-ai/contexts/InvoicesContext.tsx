@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { storage } from '../utils/storage';
 import { Invoice, LineItem } from '../utils/types';
-import { seedIfEmpty } from '../utils/seed';
+import { useAuth } from './AuthContext';
 
 type InvoicesContextType = {
   invoices: Invoice[];
@@ -15,8 +15,6 @@ type InvoicesContextType = {
 };
 
 const InvoicesContext = createContext<InvoicesContextType | null>(null);
-const KEY = 'invoices';
-const COUNTER_KEY = 'invoices_counter';
 
 const newId = (p: string) => p + '_' + Date.now().toString() + Math.random().toString(36).slice(2, 8);
 
@@ -25,13 +23,26 @@ function padNum(n: number): string {
 }
 
 export function InvoicesProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
+
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [counter, setCounter] = useState(0);
 
   useEffect(() => {
+    if (!userId) {
+      setInvoices([]);
+      setCounter(0);
+      setLoading(false);
+      return;
+    }
+
+    const KEY = `invoices_${userId}`;
+    const COUNTER_KEY = `invoices_counter_${userId}`;
+
+    setLoading(true);
     (async () => {
-      await seedIfEmpty();
       const list = (await storage.get<Invoice[]>(KEY)) ?? [];
       setInvoices(list);
 
@@ -51,16 +62,17 @@ export function InvoicesProvider({ children }: { children: React.ReactNode }) {
 
       setLoading(false);
     })();
-  }, []);
+  }, [userId]);
 
   const persist = async (list: Invoice[]) => {
+    if (!userId) return;
     setInvoices(list);
-    await storage.set(KEY, list);
+    await storage.set(`invoices_${userId}`, list);
   };
 
   const nextInvoiceNumber = async (currentCounter: number): Promise<[string, number]> => {
     const next = currentCounter + 1;
-    await storage.set(COUNTER_KEY, next);
+    if (userId) await storage.set(`invoices_counter_${userId}`, next);
     setCounter(next);
     return [`INV-${padNum(next)}`, next];
   };
