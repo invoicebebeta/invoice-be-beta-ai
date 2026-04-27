@@ -42,7 +42,8 @@ export default function CreateInvoiceScreen() {
   const editId = typeof params.editId === "string" ? params.editId : undefined;
   const editing = !!editId;
   const editingInvoice = editing ? getInvoice(editId!) : undefined;
-  const editLocked = editing && editingInvoice && editingInvoice.status !== "draft";
+  const editLocked = false; // editing allowed for all statuses
+  const editInProgress = editing && editingInvoice && editingInvoice.status !== "draft";
 
   const customers = useMemo<CustomerSuggestion[]>(() => {
     const byEmail = new Map<string, CustomerSuggestion>();
@@ -188,23 +189,12 @@ export default function CreateInvoiceScreen() {
     router.push(`/invoice/${id}`);
   };
 
-  if (editLocked) {
-    return (
-      <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: topInset }}>
-        <ScreenHeader title="Cannot edit" subtitle="This invoice has already started its payment flow" />
-        <View style={{ paddingHorizontal: 20 }}>
-          <PrimaryButton title="Back to invoice" onPress={() => router.replace(`/invoice/${editingInvoice!.id}`)} icon="arrow-left" />
-        </View>
-      </View>
-    );
-  }
-
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={{ paddingTop: topInset }}>
         <ScreenHeader
-          title={editing ? "Edit draft" : "New invoice"}
-          subtitle={editing ? "Update the details before sending" : "Fill in the details below"}
+          title={editing ? "Edit invoice" : "New invoice"}
+          subtitle={editing ? "Update the details below" : "Fill in the details below"}
           right={
             editing ? (
               <Pressable onPress={() => router.replace(`/invoice/${editingInvoice!.id}`)} hitSlop={10} style={{ padding: 6 }}>
@@ -221,6 +211,14 @@ export default function CreateInvoiceScreen() {
         bottomOffset={20}
         keyboardShouldPersistTaps="handled"
       >
+        {editInProgress && (
+          <View style={[styles.warnBanner, { backgroundColor: "#fef3c7", borderColor: "#fcd34d", borderRadius: colors.radius }]}>
+            <Feather name="alert-circle" size={15} color="#92400e" style={{ marginTop: 1 }} />
+            <Text style={styles.warnText}>
+              This invoice is already in progress. Editing will update the details but will not regenerate any existing payment links.
+            </Text>
+          </View>
+        )}
         <Text style={[styles.section, { color: colors.mutedForeground }]}>Customer</Text>
         <CustomerSuggest
           customers={customers}
@@ -343,4 +341,6 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   notesHint: { fontFamily: "Inter_400Regular", fontSize: 11, marginBottom: 12 },
+  warnBanner: { flexDirection: "row", alignItems: "flex-start", gap: 8, padding: 12, borderWidth: 1, marginBottom: 16, marginTop: 4 },
+  warnText: { fontFamily: "Inter_400Regular", fontSize: 13, color: "#92400e", flex: 1, lineHeight: 18 },
 });

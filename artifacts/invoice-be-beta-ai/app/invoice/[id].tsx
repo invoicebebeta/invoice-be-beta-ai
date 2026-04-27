@@ -175,19 +175,20 @@ export default function InvoiceDetailScreen() {
       haptic();
       router.replace("/(tabs)");
     };
+    const isDraft = invoice.status === "draft";
+    const title = isDraft ? "Delete invoice?" : "Delete invoice?";
+    const message = isDraft
+      ? `This will permanently remove the draft for ${invoice.customerName}. This cannot be undone.`
+      : `This invoice for ${invoice.customerName} is already in progress. Deleting it will remove it from your records permanently. Any shared payment links will still work until they expire. This cannot be undone.`;
     if (Platform.OS === "web") {
-      if (window.confirm(`Delete this draft for ${invoice.customerName}? This cannot be undone.`)) {
+      if (window.confirm(`${title}\n\n${message}`)) {
         doDelete();
       }
     } else {
-      Alert.alert(
-        "Delete draft?",
-        `This will permanently remove the invoice for ${invoice.customerName}.`,
-        [
-          { text: "Cancel", style: "cancel" },
-          { text: "Delete", style: "destructive", onPress: doDelete },
-        ]
-      );
+      Alert.alert(title, message, [
+        { text: "Cancel", style: "cancel" },
+        { text: "Delete", style: "destructive", onPress: doDelete },
+      ]);
     }
   };
 
@@ -417,9 +418,7 @@ export default function InvoiceDetailScreen() {
         {invoice.status === "fully_paid" && (
           <PrimaryButton title="Leave a review" onPress={() => router.push(`/review/${invoice.id}`)} icon="star" variant="success" />
         )}
-        {invoice.status === "draft" && (
-          <SecondaryButton title="Edit invoice" onPress={() => router.push(`/(tabs)/create?editId=${invoice.id}`)} icon="edit-2" />
-        )}
+        <SecondaryButton title="Edit invoice" onPress={() => router.push(`/(tabs)/create?editId=${invoice.id}`)} icon="edit-2" />
         <SecondaryButton title="Duplicate invoice" onPress={onDuplicate} icon="copy" />
         <SecondaryButton
           title={emailLoading ? "Sending email…" : `Email invoice to ${invoice.customerEmail}`}
@@ -453,9 +452,12 @@ export default function InvoiceDetailScreen() {
             }
           }}
         />
-        {invoice.status === "draft" && (
-          <SecondaryButton title="Delete draft" onPress={onDelete} icon="trash-2" variant="destructive" />
-        )}
+        <SecondaryButton
+          title={invoice.status === "draft" ? "Delete draft" : "Delete invoice"}
+          onPress={onDelete}
+          icon="trash-2"
+          variant="destructive"
+        />
       </View>
     </ScrollView>
   );
