@@ -35,22 +35,24 @@ Each app user can connect their own Stripe account via OAuth (Stripe Connect Sta
 - Set `EXPO_PUBLIC_API_BASE_URL` to the API server URL (e.g. `https://<domain>:8080`)
 - Defaults to same-origin port 8080 on web, localhost:8080 on native
 
-## Email (Pending Setup)
+## Email
 
-Transactional email via Resend is planned but not yet implemented.
+Transactional email via Resend. API key stored as `RESEND_API_KEY` secret.
 
-**To enable:**
-1. Create a free account at resend.com
-2. Generate an API key (starts with `re_`)
-3. Add it as `RESEND_API_KEY` secret
-4. The `resend` npm package is already installed in `artifacts/api-server`
+> Note: User dismissed the Replit Resend integration connector — API key stored manually as a secret.
 
-**Planned features once connected:**
-- `POST /api/email/send-invoice` — email invoice + payment link to customer
-- Payment confirmation emails triggered by Stripe webhooks
-- Overdue invoice reminder emails
+**API endpoints:**
+- `POST /api/email/send-invoice` — emails invoice summary + payment link to customer
+- `POST /api/email/send-confirmation` — emails payment confirmation to customer
 
-> Note: User dismissed the Replit Resend integration connector — use manual API key via secret instead.
+**Mobile app:**
+- "Email invoice to [customer]" button on every invoice detail screen
+- Sends current payment link (deposit/final/any) alongside the invoice summary
+
+**Source files:**
+- `artifacts/api-server/src/emailService.ts` — Resend client, HTML templates, send functions
+- `artifacts/api-server/src/routes/email.ts` — Express routes
+- `artifacts/invoice-be-beta-ai/utils/emailApi.ts` — mobile API client
 
 ## Key Commands
 

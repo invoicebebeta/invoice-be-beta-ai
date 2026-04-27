@@ -24,6 +24,7 @@ import {
 } from "@/utils/calculations";
 import { downloadInvoicePdf } from "@/utils/invoicePdf";
 import { createStripeCheckout } from "@/utils/stripeApi";
+import { sendInvoiceEmail } from "@/utils/emailApi";
 
 const NEXT_ACTION: Record<InvoiceStatus, string> = {
   draft: "Send invoice to customer",
@@ -42,6 +43,7 @@ export default function InvoiceDetailScreen() {
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [stripeLinkLoading, setStripeLinkLoading] = useState(false);
+  const [emailLoading, setEmailLoading] = useState(false);
 
   if (!invoice) {
     return (
@@ -239,6 +241,23 @@ export default function InvoiceDetailScreen() {
     showAlert('Payment link copied', 'A fresh Stripe checkout link has been generated and copied to your clipboard.');
   };
 
+  const handleEmailInvoice = async () => {
+    if (!user) return;
+    setEmailLoading(true);
+    const paymentLink =
+      invoice.status === 'awaiting_deposit' ? invoice.depositLink :
+      invoice.status === 'deposit_paid' ? invoice.finalLink :
+      invoice.depositLink ?? invoice.finalLink;
+    const result = await sendInvoiceEmail(invoice, user, paymentLink);
+    setEmailLoading(false);
+    haptic();
+    if ('error' in result) {
+      showAlert('Email failed', (result as any).error);
+    } else {
+      showAlert('Invoice sent', `Invoice emailed to ${invoice.customerEmail}.`);
+    }
+  };
+
   const showAwaitingBanner = invoice.status === "awaiting_deposit" || invoice.status === "draft" || invoice.status === "deposit_paid";
 
   return (
@@ -402,6 +421,11 @@ export default function InvoiceDetailScreen() {
           <SecondaryButton title="Edit invoice" onPress={() => router.push(`/(tabs)/create?editId=${invoice.id}`)} icon="edit-2" />
         )}
         <SecondaryButton title="Duplicate invoice" onPress={onDuplicate} icon="copy" />
+        <SecondaryButton
+          title={emailLoading ? "Sending email…" : `Email invoice to ${invoice.customerEmail}`}
+          icon="mail"
+          onPress={handleEmailInvoice}
+        />
         {user?.stripeConnectedAccountId && invoice.status !== "fully_paid" && (
           <SecondaryButton
             title={
