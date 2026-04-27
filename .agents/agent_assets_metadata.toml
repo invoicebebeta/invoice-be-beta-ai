@@ -78,6 +78,24 @@ uri = "file://attached_assets/logo_fast_3.png"
 type = "image"
 title = "generated_image"
 
+[[generated]]
+id = "XwHuuU7tgbNMm_UPYpAxT"
+uri = "file://attached_assets/logo_brand_1.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "SKr_HysZYx0-tkgTxP-ED"
+uri = "file://attached_assets/logo_brand_2.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "v0tSk5L-cnTJv_A8kJpoD"
+uri = "file://attached_assets/logo_brand_3.png"
+type = "image"
+title = "generated_image"
+
 [[outputs]]
 id = "DiiJQESmwVBWZb0jV5Oa5"
 uri = "file://attached_assets/logo_option_1.png"
@@ -149,3 +167,21 @@ id = "ycTNFZ12E1dqNHT6PldI5"
 uri = "file://attached_assets/logo_fast_3.png"
 type = "image"
 title = "Option 3 — Checkmark swoosh on document"
+
+[[outputs]]
+id = "JakXz9R3oa0wvW4Fc9ZkR"
+uri = "file://attached_assets/logo_brand_1.png"
+type = "image"
+title = "Option 1 — White doc, blue text inside"
+
+[[outputs]]
+id = "L-PqGYgg4C-fosh4RVUee"
+uri = "file://attached_assets/logo_brand_2.png"
+type = "image"
+title = "Option 2 — Blue outlined doc, text inside"
+
+[[outputs]]
+id = "5DDEsqAEMCQENiB9yHLKe"
+uri = "file://attached_assets/logo_brand_3.png"
+type = "image"
+title = "Option 3 — Solid blue doc, white text inside"
