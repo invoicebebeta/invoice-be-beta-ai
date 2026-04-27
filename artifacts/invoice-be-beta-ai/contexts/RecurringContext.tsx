@@ -2,7 +2,6 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { storage } from '../utils/storage';
 import { Invoice, LineItem, RecurringFrequency, RecurringTemplate } from '../utils/types';
 import { calculateDeposit, calculateRemaining, calculateTotal } from '../utils/calculations';
-import { generateShareLink } from '../utils/mockLinks';
 
 const KEY = 'recurring_templates';
 const newId = (p: string) => p + '_' + Date.now().toString() + Math.random().toString(36).slice(2, 8);
@@ -85,8 +84,8 @@ export function RecurringProvider({ children }: { children: React.ReactNode }) {
       status: tmpl.requireDeposit ? 'awaiting_deposit' : 'draft',
       currency: tmpl.currency,
       notes: tmpl.notes,
-      depositLink: tmpl.requireDeposit ? generateShareLink(id, 'deposit') : undefined,
-      finalLink: generateShareLink(id, 'final'),
+      depositLink: undefined,
+      finalLink: undefined,
       createdAt: new Date().toISOString(),
     };
   };

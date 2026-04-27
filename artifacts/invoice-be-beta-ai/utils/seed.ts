@@ -17,8 +17,7 @@ const seedInvoices: Invoice[] = [
     depositAmount: 2500,
     remainingBalance: 2500,
     status: 'awaiting_deposit',
-    createdAt: new Date().toISOString(),
-    depositLink: 'https://invoicebeta.app/pay/inv_1/deposit'
+    createdAt: new Date().toISOString()
   },
   {
     id: 'inv_2',
@@ -35,9 +34,7 @@ const seedInvoices: Invoice[] = [
     depositAmount: 900,
     remainingBalance: 2100,
     status: 'deposit_paid',
-    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    depositLink: 'https://invoicebeta.app/pay/inv_2/deposit',
-    finalLink: 'https://invoicebeta.app/pay/inv_2/final'
+    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
   },
   {
     id: 'inv_3',

@@ -23,7 +23,6 @@ import {
   lineTotal,
 } from "@/utils/calculations";
 import { downloadInvoicePdf } from "@/utils/invoicePdf";
-import { generateShareLink } from "@/utils/mockLinks";
 import { createStripeCheckout } from "@/utils/stripeApi";
 
 const NEXT_ACTION: Record<InvoiceStatus, string> = {
@@ -70,13 +69,31 @@ export default function InvoiceDetailScreen() {
 
   const requestDeposit = async () => {
     setPendingAction("request_deposit");
+    let depositLink = invoice.depositLink ?? undefined;
+    if (!depositLink && user?.stripeConnectedAccountId) {
+      const result = await createStripeCheckout({
+        userId: user.id,
+        amount: invoice.depositAmount,
+        currency: invoice.currency,
+        description: `Deposit — Invoice ${invoice.invoiceNumber ?? invoice.id} for ${invoice.customerName}`,
+        invoiceRef: invoice.invoiceNumber ?? invoice.id,
+      });
+      if (!('error' in result)) {
+        depositLink = (result as { url: string }).url;
+      }
+    }
     await updateInvoice(invoice.id, {
       status: "awaiting_deposit",
-      depositLink: invoice.depositLink ?? generateShareLink(invoice.id, "deposit"),
+      ...(depositLink ? { depositLink } : {}),
     });
     setPendingAction(null);
     haptic();
-    showAlert("Deposit requested", "We've generated a payment link you can share with your customer.");
+    if (depositLink) {
+      await Clipboard.setStringAsync(depositLink);
+      showAlert("Deposit requested", "A Stripe payment link has been generated and copied to your clipboard. Share it with your customer.");
+    } else {
+      showAlert("Deposit requested", "Invoice updated. Connect a Stripe account in your profile to generate a payment link.");
+    }
   };
 
   const markDepositPaid = async () => {
@@ -102,12 +119,30 @@ export default function InvoiceDetailScreen() {
 
   const requestFinal = async () => {
     setPendingAction("request_final");
+    let finalLink = invoice.finalLink ?? undefined;
+    if (!finalLink && user?.stripeConnectedAccountId) {
+      const result = await createStripeCheckout({
+        userId: user.id,
+        amount: invoice.remainingBalance,
+        currency: invoice.currency,
+        description: `Final payment — Invoice ${invoice.invoiceNumber ?? invoice.id} for ${invoice.customerName}`,
+        invoiceRef: invoice.invoiceNumber ?? invoice.id,
+      });
+      if (!('error' in result)) {
+        finalLink = (result as { url: string }).url;
+      }
+    }
     await updateInvoice(invoice.id, {
-      finalLink: invoice.finalLink ?? generateShareLink(invoice.id, "final"),
+      ...(finalLink ? { finalLink } : {}),
     });
     setPendingAction(null);
     haptic();
-    showAlert("Final payment requested", "We've generated a final payment link you can share.");
+    if (finalLink) {
+      await Clipboard.setStringAsync(finalLink);
+      showAlert("Final payment requested", "A Stripe payment link has been generated and copied to your clipboard. Share it with your customer.");
+    } else {
+      showAlert("Final payment requested", "Invoice updated. Connect a Stripe account in your profile to generate a payment link.");
+    }
   };
 
   const markFullyPaid = async () => {
@@ -173,16 +208,19 @@ export default function InvoiceDetailScreen() {
   const getStripePaymentLink = async () => {
     if (!user?.stripeConnectedAccountId) return;
     setStripeLinkLoading(true);
-    const amountToPay = invoice.status === 'awaiting_deposit'
+    const isDeposit = invoice.status === 'awaiting_deposit';
+    const isFinal = invoice.status === 'deposit_paid';
+    const amountToPay = isDeposit
       ? invoice.depositAmount
-      : invoice.status === 'deposit_paid'
+      : isFinal
         ? invoice.remainingBalance
         : invoice.total;
+    const labelPrefix = isDeposit ? 'Deposit' : isFinal ? 'Final payment' : 'Payment';
     const result = await createStripeCheckout({
       userId: user.id,
       amount: amountToPay,
       currency: invoice.currency,
-      description: `Invoice ${invoice.invoiceNumber ?? invoice.id} — ${invoice.customerName}`,
+      description: `${labelPrefix} — Invoice ${invoice.invoiceNumber ?? invoice.id} for ${invoice.customerName}`,
       invoiceRef: invoice.invoiceNumber ?? invoice.id,
     });
     setStripeLinkLoading(false);
@@ -191,9 +229,14 @@ export default function InvoiceDetailScreen() {
       return;
     }
     const { url } = result as { url: string };
+    if (isDeposit) {
+      await updateInvoice(invoice.id, { depositLink: url });
+    } else if (isFinal) {
+      await updateInvoice(invoice.id, { finalLink: url });
+    }
     await Clipboard.setStringAsync(url);
     haptic();
-    showAlert('Payment link copied', 'The Stripe checkout link has been copied to your clipboard. Share it with your customer to collect payment.');
+    showAlert('Payment link copied', 'A fresh Stripe checkout link has been generated and copied to your clipboard.');
   };
 
   const showAwaitingBanner = invoice.status === "awaiting_deposit" || invoice.status === "draft" || invoice.status === "deposit_paid";
@@ -361,7 +404,15 @@ export default function InvoiceDetailScreen() {
         <SecondaryButton title="Duplicate invoice" onPress={onDuplicate} icon="copy" />
         {user?.stripeConnectedAccountId && invoice.status !== "fully_paid" && (
           <SecondaryButton
-            title={stripeLinkLoading ? "Generating link…" : "Get Stripe payment link"}
+            title={
+              stripeLinkLoading
+                ? "Generating link…"
+                : invoice.status === "awaiting_deposit"
+                  ? (invoice.depositLink ? "Regenerate deposit payment link" : "Get deposit payment link")
+                  : invoice.status === "deposit_paid"
+                    ? (invoice.finalLink ? "Regenerate final payment link" : "Get final payment link")
+                    : "Get Stripe payment link"
+            }
             icon="credit-card"
             onPress={getStripePaymentLink}
           />

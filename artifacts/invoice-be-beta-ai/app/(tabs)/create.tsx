@@ -16,7 +16,6 @@ import { DepositToggle } from "@/components/DepositToggle";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { calculateDeposit, calculateRemaining, calculateTotal, formatMoney } from "@/utils/calculations";
 import { Invoice, InvoiceStatus, LineItem } from "@/utils/types";
-import { generateShareLink } from "@/utils/mockLinks";
 
 const newId = (p: string) => p + "_" + Date.now().toString() + Math.random().toString(36).slice(2, 8);
 
@@ -154,9 +153,7 @@ export default function CreateInvoiceScreen() {
         depositAmount,
         remainingBalance: remaining,
         notes: notes.trim() || undefined,
-        depositLink: requireDeposit
-          ? editingInvoice.depositLink ?? generateShareLink(editingInvoice.id, "deposit")
-          : undefined,
+        depositLink: requireDeposit ? editingInvoice.depositLink : undefined,
       };
       await updateInvoice(editingInvoice.id, patch);
       setSaving(false);
@@ -180,8 +177,8 @@ export default function CreateInvoiceScreen() {
       remainingBalance: remaining,
       status,
       currency: user?.currency ?? "USD",
-      depositLink: requireDeposit ? generateShareLink(id, "deposit") : undefined,
-      finalLink: generateShareLink(id, "final"),
+      depositLink: undefined,
+      finalLink: undefined,
       notes: notes.trim() || undefined,
       createdAt: new Date().toISOString(),
     };

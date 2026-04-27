@@ -2,7 +2,6 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 import { storage } from '../utils/storage';
 import { Invoice, LineItem } from '../utils/types';
 import { seedIfEmpty } from '../utils/seed';
-import { generateShareLink } from '../utils/mockLinks';
 
 type InvoicesContextType = {
   invoices: Invoice[];
@@ -94,8 +93,8 @@ export function InvoicesProvider({ children }: { children: React.ReactNode }) {
       lineItems: clonedItems,
       dueDate,
       status: 'draft',
-      depositLink: source.requireDeposit ? generateShareLink(newInvoiceId, 'deposit') : undefined,
-      finalLink: generateShareLink(newInvoiceId, 'final'),
+      depositLink: undefined,
+      finalLink: undefined,
       createdAt: new Date().toISOString(),
     };
     await persist([copy, ...invoices]);
