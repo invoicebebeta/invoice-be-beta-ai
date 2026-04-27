@@ -1,8 +1,43 @@
 uploads = []
-outputs = []
 
 [[generated]]
 id = "nWzrikjrb8zhg5DA9EkYw"
 uri = "file://artifacts/invoice-be-beta-ai/assets/images/icon.png"
 type = "image"
 title = "invoice app icon"
+
+[[generated]]
+id = "xZc7A93yClTyw6bIWwCRI"
+uri = "file://attached_assets/logo_option_1.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "HJZqFKiTKLp19Q1N8J5NG"
+uri = "file://attached_assets/logo_option_2.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "C1Sas5QyVWq3p2-1ChnWf"
+uri = "file://attached_assets/logo_option_3.png"
+type = "image"
+title = "generated_image"
+
+[[outputs]]
+id = "DiiJQESmwVBWZb0jV5Oa5"
+uri = "file://attached_assets/logo_option_1.png"
+type = "image"
+title = "Option 1 — Sage green with gold spark"
+
+[[outputs]]
+id = "gYwPnuOJWvz10KQ8h9HTH"
+uri = "file://attached_assets/logo_option_2.png"
+type = "image"
+title = "Option 2 — Cream with sage diamond"
+
+[[outputs]]
+id = "GfCxakDqaU1AgQlgzoXZY"
+uri = "file://attached_assets/logo_option_3.png"
+type = "image"
+title = "Option 3 — Dark charcoal with gold coin"
