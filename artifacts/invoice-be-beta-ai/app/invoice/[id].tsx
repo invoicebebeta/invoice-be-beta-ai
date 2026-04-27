@@ -123,6 +123,7 @@ export default function InvoiceDetailScreen() {
   };
 
   const requestFinal = async () => {
+    if (!user) return;
     setPendingAction("request_final");
     let finalLink = invoice.finalLink ?? undefined;
     if (!finalLink && user?.stripeConnectedAccountId) {
@@ -140,14 +141,10 @@ export default function InvoiceDetailScreen() {
     await updateInvoice(invoice.id, {
       ...(finalLink ? { finalLink } : {}),
     });
+    await sendInvoiceEmail(invoice, user, finalLink);
     setPendingAction(null);
     haptic();
-    if (finalLink) {
-      await Clipboard.setStringAsync(finalLink);
-      showAlert("Final payment requested", "A Stripe payment link has been generated and copied to your clipboard. Share it with your customer.");
-    } else {
-      showAlert("Final payment requested", "Invoice updated. Connect a Stripe account in your profile to generate a payment link.");
-    }
+    showAlert("Payment requested", `Invoice emailed to ${invoice.customerEmail}${finalLink ? " with a payment link" : ""}.`);
   };
 
   const markFullyPaid = async () => {
@@ -432,14 +429,12 @@ export default function InvoiceDetailScreen() {
         )}
         {invoice.status === "awaiting_deposit" && (
           <>
-            <PrimaryButton title={`Pay deposit (${formatMoney(invoice.depositAmount, invoice.currency)})`} onPress={payDeposit} loading={pendingAction === "pay_deposit"} icon="credit-card" />
-            <SecondaryButton title="Mark deposit as paid" onPress={markDepositPaid} icon="check" />
+            <PrimaryButton title="Mark deposit as paid" onPress={markDepositPaid} loading={pendingAction === "mark_deposit"} icon="check" />
           </>
         )}
         {invoice.status === "deposit_paid" && (
           <>
-            <PrimaryButton title={`Pay remaining (${formatMoney(invoice.remainingBalance, invoice.currency)})`} onPress={payRemaining} loading={pendingAction === "pay_remaining"} icon="credit-card" variant="success" />
-            <SecondaryButton title="Request final payment" onPress={requestFinal} icon="send" />
+            <PrimaryButton title="Request final payment" onPress={requestFinal} loading={pendingAction === "request_final"} icon="send" />
             <SecondaryButton title="Mark as fully paid" onPress={markFullyPaid} icon="check-circle" />
           </>
         )}
