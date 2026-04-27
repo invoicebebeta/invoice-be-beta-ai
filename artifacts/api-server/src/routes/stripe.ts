@@ -86,29 +86,34 @@ router.post('/stripe/invoice/checkout', async (req, res) => {
   if (!accountId) {
     return res.status(404).json({ error: 'No connected Stripe account for this user. Connect Stripe first.' });
   }
-  const stripe = await getUncachableStripeClient();
-  const baseUrl = `https://${(process.env.REPLIT_DOMAINS ?? '').split(',')[0]}`;
-  const session = await stripe.checkout.sessions.create(
-    {
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price_data: {
-            currency: currency.toLowerCase(),
-            unit_amount: Math.round(amount * 100),
-            product_data: { name: description || 'Invoice payment' },
+  try {
+    const stripe = await getUncachableStripeClient();
+    const baseUrl = `https://${(process.env.REPLIT_DOMAINS ?? '').split(',')[0]}`;
+    const session = await stripe.checkout.sessions.create(
+      {
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price_data: {
+              currency: currency.toLowerCase(),
+              unit_amount: Math.round(amount * 100),
+              product_data: { name: description || 'Invoice payment' },
+            },
+            quantity: 1,
           },
-          quantity: 1,
-        },
-      ],
-      mode: 'payment',
-      success_url: `${baseUrl}/payment-success`,
-      cancel_url: `${baseUrl}/payment-cancelled`,
-      metadata: { invoiceRef: invoiceRef ?? '' },
-    },
-    { stripeAccount: accountId }
-  );
-  res.json({ url: session.url, sessionId: session.id });
+        ],
+        mode: 'payment',
+        success_url: `${baseUrl}/payment-success`,
+        cancel_url: `${baseUrl}/payment-cancelled`,
+        metadata: { invoiceRef: invoiceRef ?? '' },
+      },
+      { stripeAccount: accountId }
+    );
+    res.json({ url: session.url, sessionId: session.id });
+  } catch (err: any) {
+    logger.error({ err: err.message }, 'Stripe Checkout session creation failed');
+    res.status(400).json({ error: err.message ?? 'Failed to create Stripe Checkout session.' });
+  }
 });
 
 export default router;
