@@ -35,6 +35,23 @@ Each app user can connect their own Stripe account via OAuth (Stripe Connect Sta
 - Set `EXPO_PUBLIC_API_BASE_URL` to the API server URL (e.g. `https://<domain>:8080`)
 - Defaults to same-origin port 8080 on web, localhost:8080 on native
 
+## Email (Pending Setup)
+
+Transactional email via Resend is planned but not yet implemented.
+
+**To enable:**
+1. Create a free account at resend.com
+2. Generate an API key (starts with `re_`)
+3. Add it as `RESEND_API_KEY` secret
+4. The `resend` npm package is already installed in `artifacts/api-server`
+
+**Planned features once connected:**
+- `POST /api/email/send-invoice` — email invoice + payment link to customer
+- Payment confirmation emails triggered by Stripe webhooks
+- Overdue invoice reminder emails
+
+> Note: User dismissed the Replit Resend integration connector — use manual API key via secret instead.
+
 ## Key Commands
 
 - `pnpm run typecheck` — full typecheck across all packages
