@@ -445,8 +445,7 @@ export default function InvoiceDetailScreen() {
         )}
         {invoice.status === "draft" && !invoice.requireDeposit && (
           <>
-            <PrimaryButton title={`Pay invoice (${formatMoney(invoice.total, invoice.currency)})`} onPress={payRemaining} loading={pendingAction === "pay_remaining"} icon="credit-card" variant="success" />
-            <SecondaryButton title="Request payment" onPress={requestFinal} icon="send" />
+            <PrimaryButton title="Request payment" onPress={requestFinal} icon="send" />
             <SecondaryButton title="Mark as fully paid" onPress={markFullyPaid} icon="check-circle" />
           </>
         )}
