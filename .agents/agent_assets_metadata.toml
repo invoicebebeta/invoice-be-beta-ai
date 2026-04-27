@@ -42,6 +42,24 @@ uri = "file://attached_assets/logo_blue_3.png"
 type = "image"
 title = "generated_image"
 
+[[generated]]
+id = "PvtqM9wY4svGuAibErWtW"
+uri = "file://attached_assets/logo_text_1.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "j7xRzRswtg7iAFnvZFrmv"
+uri = "file://attached_assets/logo_text_2.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "iqHfChj5Zmlrjj_us12tP"
+uri = "file://attached_assets/logo_text_3.png"
+type = "image"
+title = "generated_image"
+
 [[outputs]]
 id = "DiiJQESmwVBWZb0jV5Oa5"
 uri = "file://attached_assets/logo_option_1.png"
@@ -77,3 +95,21 @@ id = "Z9PJ9N4-YMjDpI_ucSnlQ"
 uri = "file://attached_assets/logo_blue_3.png"
 type = "image"
 title = "Option 3 — White background, vivid blue invoice"
+
+[[outputs]]
+id = "nul88OZObxt3jeYA7PI87"
+uri = "file://attached_assets/logo_text_1.png"
+type = "image"
+title = "Option 1 — White bg, blue Invoice + Pay Now button"
+
+[[outputs]]
+id = "eg98cYiyY0DHOHsuJVfGA"
+uri = "file://attached_assets/logo_text_2.png"
+type = "image"
+title = "Option 2 — Blue bg, white invoice + Pay button"
+
+[[outputs]]
+id = "MEI3WZi--34Y0T0agj_ZM"
+uri = "file://attached_assets/logo_text_3.png"
+type = "image"
+title = "Option 3 — Document icon + Invoice text + Pay button"
