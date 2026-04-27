@@ -19,16 +19,19 @@ export async function ensureUsersTable(): Promise<void> {
     await client.query(`
       CREATE TABLE IF NOT EXISTS app_users (
         id TEXT PRIMARY KEY,
-        email TEXT UNIQUE NOT NULL,
+        email TEXT NOT NULL UNIQUE,
         password_hash TEXT NOT NULL,
-        business_name TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT NOW()
+        business_name TEXT NOT NULL
       )
+    `);
+    await client.query(`
+      ALTER TABLE app_users ADD COLUMN IF NOT EXISTS logo_data TEXT
     `);
   } finally {
     client.release();
   }
 }
+
 
 export async function ensureResetTokensTable(): Promise<void> {
   const client = await getPool().connect();
@@ -47,7 +50,7 @@ export async function ensureResetTokensTable(): Promise<void> {
   }
 }
 
-export type AppUser = { id: string; email: string; password_hash: string; business_name: string };
+export type AppUser = { id: string; email: string; password_hash: string; business_name: string; logo_data: string | null };
 
 export async function findUserByEmail(email: string): Promise<AppUser | null> {
   const r = await getPool().query('SELECT * FROM app_users WHERE LOWER(email) = LOWER($1)', [email]);
@@ -68,6 +71,10 @@ export async function createUser(id: string, email: string, passwordHash: string
 
 export async function updateUserPassword(userId: string, passwordHash: string): Promise<void> {
   await getPool().query('UPDATE app_users SET password_hash = $1 WHERE id = $2', [passwordHash, userId]);
+}
+
+export async function updateUserLogo(userId: string, logoData: string | null): Promise<void> {
+  await getPool().query('UPDATE app_users SET logo_data = $1 WHERE id = $2', [logoData, userId]);
 }
 
 export async function createResetToken(token: string, userId: string, expiresAt: Date): Promise<void> {

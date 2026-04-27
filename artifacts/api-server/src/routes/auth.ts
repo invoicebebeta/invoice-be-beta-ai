@@ -6,6 +6,7 @@ import {
   findUserById,
   createUser,
   updateUserPassword,
+  updateUserLogo,
   createResetToken,
   findResetToken,
   markResetTokenUsed,
@@ -62,6 +63,14 @@ router.post('/auth/signin', async (req, res) => {
 
   logger.info({ id: user.id, email }, 'User signed in');
   res.json({ ok: true, user: { id: user.id, email: user.email, businessName: user.business_name } });
+});
+
+router.put('/auth/logo', async (req, res) => {
+  const { userId, logoData } = req.body ?? {};
+  if (!userId) return res.status(400).json({ error: 'userId is required' });
+  await updateUserLogo(userId, logoData ?? null);
+  logger.info({ userId }, 'Logo updated');
+  res.json({ ok: true });
 });
 
 router.post('/auth/forgot-password', async (req, res) => {

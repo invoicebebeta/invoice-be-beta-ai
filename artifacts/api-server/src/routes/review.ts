@@ -28,6 +28,9 @@ router.get('/review/:userId', async (req, res) => {
 
   const user = await findUserById(userId);
   const businessName = user?.business_name ?? 'This business';
+  const logoHtml = user?.logo_data
+    ? `<img src="${user.logo_data}" alt="${businessName}" style="width:56px;height:56px;border-radius:10px;object-fit:cover;margin-bottom:14px;display:block;">`
+    : `<div style="width:56px;height:56px;border-radius:10px;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;margin-bottom:14px;font-size:24px;font-weight:700;color:#fff;">${businessName.charAt(0).toUpperCase()}</div>`;
 
   const existing = await getReviewsByUserId(userId);
   const avgRating = existing.length
@@ -85,6 +88,7 @@ router.get('/review/:userId', async (req, res) => {
 <body>
 <div class="wrap">
   <div class="header">
+    ${logoHtml}
     <div class="biz-name">${businessName}</div>
     <div class="rating-row">
       <span class="avg">${avgDisplay}</span>

@@ -39,3 +39,15 @@ export async function apiSignIn(email: string, password: string) {
 export async function apiForgotPassword(email: string) {
   return post('/auth/forgot-password', { email });
 }
+
+export async function apiUpdateLogo(userId: string, logoData: string | null): Promise<void> {
+  try {
+    await fetch(`${getApiBaseUrl()}/api/auth/logo`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, logoData }),
+    });
+  } catch {
+    // non-blocking — local storage is the source of truth for the app
+  }
+}

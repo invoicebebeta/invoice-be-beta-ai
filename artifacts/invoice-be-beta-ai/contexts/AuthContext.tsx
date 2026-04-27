@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { storage } from '../utils/storage';
 import { BankDetails, User } from '../utils/types';
-import { apiSignIn, apiSignUp } from '../utils/authApi';
+import { apiSignIn, apiSignUp, apiUpdateLogo } from '../utils/authApi';
 
 type AuthContextType = {
   user: User | null;
@@ -53,6 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     await storage.set(CURRENT_KEY, merged);
     setUser(merged);
+    if (merged.logoUri) apiUpdateLogo(merged.id, merged.logoUri);
     return { ok: true };
   };
 
@@ -79,6 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateLogo = async (logoUri: string | null) => {
     if (!user) return;
     await persistUser({ ...user, logoUri: logoUri ?? undefined });
+    apiUpdateLogo(user.id, logoUri);
   };
 
   const updateBankDetails = async (details: BankDetails | null) => {
