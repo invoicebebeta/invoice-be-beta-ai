@@ -60,6 +60,24 @@ uri = "file://attached_assets/logo_text_3.png"
 type = "image"
 title = "generated_image"
 
+[[generated]]
+id = "ZxWD0WovkKVKaUeJWBMpH"
+uri = "file://attached_assets/logo_fast_1.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "doU1qGaTFInvS-p3FoadJ"
+uri = "file://attached_assets/logo_fast_2.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "4CF5vRmLdOdSAonx135Bu"
+uri = "file://attached_assets/logo_fast_3.png"
+type = "image"
+title = "generated_image"
+
 [[outputs]]
 id = "DiiJQESmwVBWZb0jV5Oa5"
 uri = "file://attached_assets/logo_option_1.png"
@@ -113,3 +131,21 @@ id = "MEI3WZi--34Y0T0agj_ZM"
 uri = "file://attached_assets/logo_text_3.png"
 type = "image"
 title = "Option 3 — Document icon + Invoice text + Pay button"
+
+[[outputs]]
+id = "6YYiXauLOK_cx2hWZa6qc"
+uri = "file://attached_assets/logo_fast_1.png"
+type = "image"
+title = "Option 1 — Lightning bolt through invoice"
+
+[[outputs]]
+id = "DaR9TvFoi-5OgHPVFS29G"
+uri = "file://attached_assets/logo_fast_2.png"
+type = "image"
+title = "Option 2 — Rocket with invoice trail"
+
+[[outputs]]
+id = "ycTNFZ12E1dqNHT6PldI5"
+uri = "file://attached_assets/logo_fast_3.png"
+type = "image"
+title = "Option 3 — Checkmark swoosh on document"
