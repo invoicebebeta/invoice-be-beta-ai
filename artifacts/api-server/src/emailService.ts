@@ -177,7 +177,7 @@ export async function sendInvoiceEmail(p: SendInvoiceParams): Promise<void> {
   const html = buildInvoiceEmail(p);
 
   const { data, error } = await resend.emails.send({
-    from: `${p.fromBusinessName} <onboarding@resend.dev>`,
+    from: `${p.fromBusinessName} <invoices@invoicebebeta.com>`,
     to: [p.toEmail],
     subject,
     html,
@@ -215,7 +215,7 @@ export async function sendPasswordResetEmail(toEmail: string, resetUrl: string):
 </html>`;
 
   const { error } = await resend.emails.send({
-    from: 'Invoice Be Beta <onboarding@resend.dev>',
+    from: 'Invoice Be Beta <hello@invoicebebeta.com>',
     to: [toEmail],
     subject: 'Reset your Invoice Be Beta password',
     html,
@@ -236,7 +236,7 @@ export async function sendPaymentConfirmationEmail(p: SendPaymentConfirmationPar
   const html = buildConfirmationEmail(p);
 
   const { data, error } = await resend.emails.send({
-    from: `${p.fromBusinessName} <onboarding@resend.dev>`,
+    from: `${p.fromBusinessName} <invoices@invoicebebeta.com>`,
     to: [p.toEmail],
     subject,
     html,
