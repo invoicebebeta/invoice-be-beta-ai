@@ -73,6 +73,21 @@ router.put('/auth/logo', async (req, res) => {
   res.json({ ok: true });
 });
 
+router.get('/logo/:userId', async (req, res) => {
+  const user = await findUserById(req.params.userId);
+  if (!user?.logo_data) return res.status(404).end();
+
+  const dataUri = user.logo_data;
+  const mimeMatch = dataUri.match(/^data:([^;]+);base64,/);
+  const mime = mimeMatch?.[1] ?? 'image/png';
+  const base64 = dataUri.replace(/^data:[^;]+;base64,/, '');
+  const buf = Buffer.from(base64, 'base64');
+
+  res.setHeader('Content-Type', mime);
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.end(buf);
+});
+
 router.post('/auth/forgot-password', async (req, res) => {
   const { email } = req.body ?? {};
   if (!email) return res.status(400).json({ error: 'Email is required' });

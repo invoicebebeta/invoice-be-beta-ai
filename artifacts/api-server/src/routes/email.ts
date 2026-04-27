@@ -30,13 +30,21 @@ router.post('/email/send-invoice', async (req, res) => {
   }
 
   try {
-    const senderUser = fromUserId ? await findUserById(fromUserId) : null;
+    const senderHasLogo = fromUserId
+      ? !!(await findUserById(fromUserId))?.logo_data
+      : false;
+    const domains = process.env.REPLIT_DOMAINS ?? '';
+    const domain = domains.split(',')[0].trim();
+    const baseUrl = domain ? `https://${domain}` : 'http://localhost:8080';
+    const fromLogoUrl = senderHasLogo && fromUserId
+      ? `${baseUrl}/api/logo/${fromUserId}`
+      : undefined;
     await sendInvoiceEmail({
       toEmail,
       toName: toName ?? toEmail,
       fromBusinessName,
       fromEmail: fromEmail ?? 'noreply@invoicebeta.app',
-      fromLogoData: senderUser?.logo_data ?? undefined,
+      fromLogoData: fromLogoUrl,
       invoiceNumber,
       invoiceId,
       lineItems,
