@@ -8,6 +8,22 @@ import { useAuth } from "@/contexts/AuthContext";
 import { TextField } from "@/components/TextField";
 import { PrimaryButton } from "@/components/PrimaryButton";
 
+type Rule = { label: string; test: (p: string) => boolean };
+
+const PASSWORD_RULES: Rule[] = [
+  { label: "At least 8 characters", test: (p) => p.length >= 8 },
+  { label: "One uppercase letter", test: (p) => /[A-Z]/.test(p) },
+  { label: "One number", test: (p) => /[0-9]/.test(p) },
+  { label: "One special character", test: (p) => /[^A-Za-z0-9]/.test(p) },
+];
+
+function validatePassword(password: string): string | null {
+  for (const rule of PASSWORD_RULES) {
+    if (!rule.test(password)) return rule.label;
+  }
+  return null;
+}
+
 export default function SignupScreen() {
   const colors = useColors();
   const router = useRouter();
@@ -18,11 +34,14 @@ export default function SignupScreen() {
   const [businessName, setBusinessName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showRules, setShowRules] = useState(false);
 
   const onSubmit = async () => {
     setError(null);
-    if (password.length < 4) {
-      setError("Password must be at least 4 characters");
+    const pwError = validatePassword(password);
+    if (pwError) {
+      setShowRules(true);
+      setError("Please meet all password requirements below");
       return;
     }
     setSubmitting(true);
@@ -49,7 +68,35 @@ export default function SignupScreen() {
       <View style={{ marginTop: 28 }}>
         <TextField label="Business name" placeholder="Maple Studio" value={businessName} onChangeText={setBusinessName} />
         <TextField label="Email" placeholder="you@studio.com" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
-        <TextField label="Password" placeholder="At least 4 characters" value={password} onChangeText={setPassword} secureTextEntry />
+        <TextField
+          label="Password"
+          placeholder="Min 8 chars, uppercase, number, symbol"
+          value={password}
+          onChangeText={(t) => { setPassword(t); if (t.length > 0) setShowRules(true); }}
+          secureTextEntry
+        />
+
+        {(showRules || password.length > 0) && (
+          <View style={[styles.rulesBox, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+            {PASSWORD_RULES.map((rule) => {
+              const passed = rule.test(password);
+              return (
+                <View key={rule.label} style={styles.ruleRow}>
+                  <Feather
+                    name={passed ? "check-circle" : "circle"}
+                    size={13}
+                    color={passed ? colors.primary : colors.mutedForeground}
+                    style={{ marginRight: 6, marginTop: 1 }}
+                  />
+                  <Text style={[styles.ruleText, { color: passed ? colors.primary : colors.mutedForeground }]}>
+                    {rule.label}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        )}
+
         {error ? <Text style={[styles.err, { color: colors.destructive }]}>{error}</Text> : null}
         <PrimaryButton title="Create account" onPress={onSubmit} loading={submitting} />
       </View>
@@ -70,4 +117,7 @@ const styles = StyleSheet.create({
   sub: { fontFamily: "Inter_400Regular", fontSize: 14, marginTop: 4 },
   link: { fontFamily: "Inter_500Medium", fontSize: 14 },
   err: { fontFamily: "Inter_500Medium", fontSize: 13, marginBottom: 12 },
+  rulesBox: { borderRadius: 8, borderWidth: 1, padding: 12, marginBottom: 14 },
+  ruleRow: { flexDirection: "row", alignItems: "flex-start", marginBottom: 4 },
+  ruleText: { fontFamily: "Inter_400Regular", fontSize: 13, flex: 1 },
 });

@@ -190,6 +190,44 @@ export async function sendInvoiceEmail(p: SendInvoiceParams): Promise<void> {
   logger.info({ id: data?.id, to: p.toEmail, subject }, 'Invoice email sent');
 }
 
+export async function sendPasswordResetEmail(toEmail: string, resetUrl: string): Promise<void> {
+  const resend = getResend();
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <div style="max-width:520px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 8px rgba(0,0,0,0.06);">
+    <div style="background:#3d5a4c;padding:32px 40px;">
+      <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">Reset your password</h1>
+    </div>
+    <div style="padding:32px 40px;">
+      <p style="margin:0 0 16px;color:#374151;font-size:15px;line-height:1.6;">We received a request to reset the password for your Invoice Be Beta account. Click the button below to choose a new password.</p>
+      <div style="margin:28px 0;text-align:center;">
+        <a href="${resetUrl}" style="display:inline-block;background:#3d5a4c;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:16px;font-weight:600;">Reset password</a>
+      </div>
+      <p style="margin:0;color:#6b7280;font-size:13px;line-height:1.6;">This link expires in 1 hour. If you did not request a password reset, you can ignore this email — your account is safe.</p>
+    </div>
+    <div style="padding:20px 40px;background:#f9fafb;border-top:1px solid #eef0f3;">
+      <p style="margin:0;color:#9ca3af;font-size:12px;text-align:center;">Invoice Be Beta</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  const { error } = await resend.emails.send({
+    from: 'Invoice Be Beta <onboarding@resend.dev>',
+    to: [toEmail],
+    subject: 'Reset your Invoice Be Beta password',
+    html,
+  });
+
+  if (error) {
+    logger.error({ error }, 'Password reset email failed');
+    throw new Error(error.message);
+  }
+  logger.info({ to: toEmail }, 'Password reset email sent');
+}
+
 export async function sendPaymentConfirmationEmail(p: SendPaymentConfirmationParams): Promise<void> {
   const resend = getResend();
   const ref = p.invoiceNumber ?? p.invoiceId;

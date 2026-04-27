@@ -9,7 +9,6 @@ export type BankDetails = {
 export type User = {
   id: string;
   email: string;
-  password: string;
   businessName: string;
   currency?: string;
   logoUri?: string;

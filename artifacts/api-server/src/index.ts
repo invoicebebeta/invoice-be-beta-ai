@@ -1,6 +1,6 @@
 import { runMigrations } from 'stripe-replit-sync';
 import { getStripeSync } from "./stripeClient";
-import { ensureConnectedAccountsTable } from "./connectDb";
+import { ensureConnectedAccountsTable, ensureUsersTable, ensureResetTokensTable } from "./connectDb";
 import app from "./app";
 import { logger } from "./lib/logger";
 
@@ -26,6 +26,10 @@ async function initStripe() {
   await runMigrations({ databaseUrl, schema: 'stripe' });
   logger.info('Stripe schema ready');
 
+  await ensureUsersTable();
+  logger.info('Users table ready');
+  await ensureResetTokensTable();
+  logger.info('Reset tokens table ready');
   await ensureConnectedAccountsTable();
   logger.info('Connected accounts table ready');
 

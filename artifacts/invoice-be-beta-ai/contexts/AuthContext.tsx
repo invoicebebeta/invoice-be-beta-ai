@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { storage } from '../utils/storage';
 import { BankDetails, User } from '../utils/types';
+import { apiSignIn, apiSignUp } from '../utils/authApi';
 
 type AuthContextType = {
   user: User | null;
@@ -16,7 +17,6 @@ type AuthContextType = {
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
-const USERS_KEY = 'users';
 const CURRENT_KEY = 'currentUser';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -33,18 +33,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp: AuthContextType['signUp'] = async (email, password, businessName) => {
     if (!email || !password || !businessName) return { ok: false, error: 'All fields are required' };
-    const users = (await storage.get<User[]>(USERS_KEY)) ?? [];
-    if (users.some((u) => u.email.toLowerCase() === email.toLowerCase())) {
-      return { ok: false, error: 'An account with that email already exists' };
-    }
-    const newUser: User = {
-      id: 'user_' + Date.now().toString() + Math.random().toString(36).slice(2, 8),
-      email,
-      password,
-      businessName,
-      currency: 'USD',
-    };
-    await storage.set(USERS_KEY, [...users, newUser]);
+    const result = await apiSignUp(email.trim(), password, businessName.trim());
+    if (!result.ok || !result.user) return { ok: false, error: result.error ?? 'Sign up failed' };
+    const newUser: User = { ...result.user, currency: 'USD' };
     await storage.set(CURRENT_KEY, newUser);
     setUser(newUser);
     return { ok: true };
@@ -52,12 +43,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn: AuthContextType['signIn'] = async (email, password) => {
     if (!email || !password) return { ok: false, error: 'Email and password are required' };
-    const users = (await storage.get<User[]>(USERS_KEY)) ?? [];
-    const found = users.find((u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
-    if (!found) return { ok: false, error: 'Invalid email or password' };
-    const withDefaults = { currency: 'USD', ...found };
-    await storage.set(CURRENT_KEY, withDefaults);
-    setUser(withDefaults);
+    const result = await apiSignIn(email.trim(), password);
+    if (!result.ok || !result.user) return { ok: false, error: result.error ?? 'Invalid email or password' };
+    const existing = await storage.get<User>(CURRENT_KEY);
+    const merged: User = {
+      currency: 'USD',
+      ...(existing?.id === result.user.id ? existing : {}),
+      ...result.user,
+    };
+    await storage.set(CURRENT_KEY, merged);
+    setUser(merged);
     return { ok: true };
   };
 
@@ -69,8 +64,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const persistUser = async (updated: User) => {
     setUser(updated);
     await storage.set(CURRENT_KEY, updated);
-    const users = (await storage.get<User[]>(USERS_KEY)) ?? [];
-    await storage.set(USERS_KEY, users.map((u) => (u.id === updated.id ? updated : u)));
   };
 
   const updateBusinessName = async (name: string) => {

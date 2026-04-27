@@ -48,7 +48,11 @@ export default function LoginScreen() {
         <PrimaryButton title="Sign in" onPress={onSubmit} loading={submitting} />
       </View>
 
-      <Pressable onPress={() => router.replace("/(auth)/signup")} style={{ marginTop: 20, alignSelf: "center" }} hitSlop={8}>
+      <Pressable onPress={() => router.push("/(auth)/forgot-password")} style={{ marginTop: 16, alignSelf: "center" }} hitSlop={8}>
+        <Text style={[styles.link, { color: colors.primary, fontFamily: "Inter_600SemiBold" }]}>Forgot password?</Text>
+      </Pressable>
+
+      <Pressable onPress={() => router.replace("/(auth)/signup")} style={{ marginTop: 12, alignSelf: "center" }} hitSlop={8}>
         <Text style={[styles.link, { color: colors.mutedForeground }]}>
           New here? <Text style={{ color: colors.primary, fontFamily: "Inter_600SemiBold" }}>Create an account</Text>
         </Text>
