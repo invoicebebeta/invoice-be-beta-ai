@@ -24,6 +24,24 @@ uri = "file://attached_assets/logo_option_3.png"
 type = "image"
 title = "generated_image"
 
+[[generated]]
+id = "12AUkHwuDiT2IsaD4ePYL"
+uri = "file://attached_assets/logo_blue_1.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "-hp6Nj3A2hCUl9_MeSKYO"
+uri = "file://attached_assets/logo_blue_2.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "VGo8I4OUXyY37Qra-0cWs"
+uri = "file://attached_assets/logo_blue_3.png"
+type = "image"
+title = "generated_image"
+
 [[outputs]]
 id = "DiiJQESmwVBWZb0jV5Oa5"
 uri = "file://attached_assets/logo_option_1.png"
@@ -41,3 +59,21 @@ id = "GfCxakDqaU1AgQlgzoXZY"
 uri = "file://attached_assets/logo_option_3.png"
 type = "image"
 title = "Option 3 — Dark charcoal with gold coin"
+
+[[outputs]]
+id = "VTbK33hxiSJynhpfBRqiR"
+uri = "file://attached_assets/logo_blue_1.png"
+type = "image"
+title = "Option 1 — White background, blue document"
+
+[[outputs]]
+id = "IlSksZOtY23mq8oDNYSTX"
+uri = "file://attached_assets/logo_blue_2.png"
+type = "image"
+title = "Option 2 — Royal blue background, white icon"
+
+[[outputs]]
+id = "Z9PJ9N4-YMjDpI_ucSnlQ"
+uri = "file://attached_assets/logo_blue_3.png"
+type = "image"
+title = "Option 3 — White background, vivid blue invoice"
