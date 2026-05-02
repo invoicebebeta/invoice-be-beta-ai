@@ -37,7 +37,7 @@ export default function CreateInvoiceScreen() {
   const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { addInvoice, updateInvoice, getInvoice, invoices } = useInvoices();
+  const { addInvoice, updateInvoice, getInvoice, invoices, canCreateInvoice } = useInvoices();
   const { user } = useAuth();
   const { customers, upsertFromInvoice } = useCustomers();
   const params = useLocalSearchParams<{ editId?: string }>();
@@ -151,6 +151,12 @@ export default function CreateInvoiceScreen() {
 
   const onSave = async () => {
     if (!validate()) return;
+
+    if (!editing && !isQuote && !canCreateInvoice) {
+      router.push("/paywall");
+      return;
+    }
+
     setSaving(true);
     if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     const dueDate = new Date(Date.now() + dueDays * 24 * 60 * 60 * 1000).toISOString();

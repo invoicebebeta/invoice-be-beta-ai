@@ -18,7 +18,8 @@ import { CurrencyPicker } from "@/components/CurrencyPicker";
 import { LogoPicker } from "@/components/LogoPicker";
 import { BankDetailsForm } from "@/components/BankDetailsForm";
 import { InvoiceColorPicker } from "@/components/InvoiceColorPicker";
-import { useInvoices } from "@/contexts/InvoicesContext";
+import { useInvoices, FREE_TIER_LIMIT } from "@/contexts/InvoicesContext";
+import { useSubscription } from "@/lib/revenuecat";
 import { exportInvoicesCsv } from "@/utils/exportCsv";
 import {
   disconnectStripe,
@@ -38,8 +39,9 @@ export default function ProfileScreen() {
     updateVatNumber, updateBusinessAddress,
   } = useAuth();
   const { reviews, averageRating, refreshReviews } = useReviews();
-  const { invoices } = useInvoices();
+  const { invoices, monthlyInvoiceCount } = useInvoices();
   const { customers } = useCustomers();
+  const { isSubscribed, customerInfo } = useSubscription();
   const [csvLoading, setCsvLoading] = useState(false);
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(user?.businessName ?? "");
@@ -125,7 +127,7 @@ export default function ProfileScreen() {
 
     if ('error' in result) {
       if (win) win.close();
-      const msg = (result as any).error as string;
+      const msg = (result as { error: string }).error;
       if (msg.includes('client_id not configured')) {
         showAlert(
           'Stripe Connect not configured',
@@ -179,6 +181,15 @@ export default function ProfileScreen() {
     else Alert.alert(title, message);
   };
 
+  const proEntitlement = customerInfo?.entitlements.active?.['pro'];
+  const renewalDateStr = proEntitlement?.expirationDate
+    ? new Date(proEntitlement.expirationDate).toLocaleDateString(undefined, {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+      })
+    : null;
+
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.background }}
@@ -217,6 +228,60 @@ export default function ProfileScreen() {
             <StarRating value={averageRating} size={22} readOnly />
           </View>
         </View>
+
+        {/* Plan section */}
+        <Text style={[styles.section, { color: colors.mutedForeground }]}>Plan</Text>
+        <View style={[styles.planCard, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
+          {isSubscribed ? (
+            <View style={styles.planRow}>
+              <View style={[styles.planIconWrap, { backgroundColor: colors.primary + "18" }]}>
+                <Feather name="zap" size={18} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <View style={styles.planTitleRow}>
+                  <Text style={[styles.planTitle, { color: colors.foreground }]}>Pro</Text>
+                  <View style={[styles.proBadge, { backgroundColor: colors.primary }]}>
+                    <Text style={[styles.proBadgeText, { color: colors.primaryForeground }]}>Active</Text>
+                  </View>
+                </View>
+                <Text style={[styles.planSub, { color: colors.mutedForeground }]}>
+                  {renewalDateStr ? `Renews ${renewalDateStr}` : "Unlimited invoices & all features"}
+                </Text>
+              </View>
+            </View>
+          ) : (
+            <>
+              <View style={styles.planRow}>
+                <View style={[styles.planIconWrap, { backgroundColor: colors.muted }]}>
+                  <Feather name="file-text" size={18} color={colors.mutedForeground} />
+                </View>
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={[styles.planTitle, { color: colors.foreground }]}>Free</Text>
+                  <Text style={[styles.planSub, { color: colors.mutedForeground }]}>
+                    {monthlyInvoiceCount} of {FREE_TIER_LIMIT} invoices used this month
+                  </Text>
+                </View>
+              </View>
+              <View style={[styles.planDivider, { borderTopColor: colors.border }]}>
+                <Pressable
+                  onPress={() => router.push("/paywall")}
+                  style={({ pressed }) => [
+                    styles.upgradeBtn,
+                    { backgroundColor: colors.primary, borderRadius: colors.radius - 2, opacity: pressed ? 0.8 : 1 },
+                  ]}
+                >
+                  <Feather name="zap" size={14} color={colors.primaryForeground} style={{ marginRight: 6 }} />
+                  <Text style={[styles.upgradeBtnText, { color: colors.primaryForeground }]}>Upgrade to Pro</Text>
+                </Pressable>
+              </View>
+            </>
+          )}
+        </View>
+        <Text style={[styles.helper, { color: colors.mutedForeground, marginBottom: 24 }]}>
+          {isSubscribed
+            ? "Thank you for being a Pro subscriber."
+            : "Upgrade for unlimited invoices, quotes, and all Pro features."}
+        </Text>
 
         <Text style={[styles.section, { color: colors.mutedForeground }]}>Branding</Text>
         <View style={{ marginBottom: 16 }}>
@@ -463,6 +528,17 @@ const styles = StyleSheet.create({
   section: { fontFamily: "Inter_600SemiBold", fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 },
   subsection: { fontFamily: "Inter_500Medium", fontSize: 12, marginBottom: 8 },
   helper: { fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 8, lineHeight: 17 },
+  planCard: { borderWidth: 1, marginBottom: 8, overflow: "hidden" },
+  planRow: { flexDirection: "row", alignItems: "center", padding: 16 },
+  planIconWrap: { width: 40, height: 40, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  planTitleRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 2 },
+  planTitle: { fontFamily: "Inter_700Bold", fontSize: 16 },
+  planSub: { fontFamily: "Inter_400Regular", fontSize: 13, marginTop: 2 },
+  proBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
+  proBadgeText: { fontFamily: "Inter_700Bold", fontSize: 11 },
+  planDivider: { borderTopWidth: StyleSheet.hairlineWidth, padding: 12 },
+  upgradeBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 11 },
+  upgradeBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
   detailCard: { borderWidth: 1, marginBottom: 8, overflow: "hidden" },
   detailRow: { flexDirection: "row", alignItems: "flex-start", padding: 14 },
   detailDivider: { borderTopWidth: StyleSheet.hairlineWidth },

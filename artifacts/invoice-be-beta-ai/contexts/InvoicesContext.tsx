@@ -2,10 +2,15 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 import { storage } from '../utils/storage';
 import { Invoice, LineItem } from '../utils/types';
 import { useAuth } from './AuthContext';
+import { useSubscription } from '@/lib/revenuecat';
+
+export const FREE_TIER_LIMIT = 3;
 
 type InvoicesContextType = {
   invoices: Invoice[];
   loading: boolean;
+  monthlyInvoiceCount: number;
+  canCreateInvoice: boolean;
   addInvoice: (invoice: Invoice) => Promise<void>;
   updateInvoice: (id: string, patch: Partial<Invoice>) => Promise<void>;
   deleteInvoice: (id: string) => Promise<void>;
@@ -25,20 +30,29 @@ function padNum(n: number): string {
   return String(n).padStart(4, '0');
 }
 
+function currentMonthKey(userId: string): string {
+  const now = new Date();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  return `monthlyInvoiceCount_${userId}_${now.getFullYear()}-${mm}`;
+}
+
 export function InvoicesProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const userId = user?.id ?? null;
+  const { isSubscribed } = useSubscription();
 
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [counter, setCounter] = useState(0);
   const [quoteCounter, setQuoteCounter] = useState(0);
+  const [monthlyInvoiceCount, setMonthlyInvoiceCount] = useState(0);
 
   useEffect(() => {
     if (!userId) {
       setInvoices([]);
       setCounter(0);
       setQuoteCounter(0);
+      setMonthlyInvoiceCount(0);
       setLoading(false);
       return;
     }
@@ -46,6 +60,7 @@ export function InvoicesProvider({ children }: { children: React.ReactNode }) {
     const KEY = `invoices_${userId}`;
     const COUNTER_KEY = `invoices_counter_${userId}`;
     const QUOTE_COUNTER_KEY = `quotes_counter_${userId}`;
+    const MONTHLY_KEY = currentMonthKey(userId);
 
     setLoading(true);
     (async () => {
@@ -79,9 +94,14 @@ export function InvoicesProvider({ children }: { children: React.ReactNode }) {
         await storage.set(QUOTE_COUNTER_KEY, maxFromExisting);
       }
 
+      const storedMonthly = (await storage.get<number>(MONTHLY_KEY)) ?? 0;
+      setMonthlyInvoiceCount(storedMonthly);
+
       setLoading(false);
     })();
   }, [userId]);
+
+  const canCreateInvoice = isSubscribed || monthlyInvoiceCount < FREE_TIER_LIMIT;
 
   const persist = async (list: Invoice[]) => {
     if (!userId) return;
@@ -103,12 +123,21 @@ export function InvoicesProvider({ children }: { children: React.ReactNode }) {
     return [`QUO-${padNum(next)}`, next];
   };
 
+  const incrementMonthlyCount = async () => {
+    if (!userId) return;
+    const key = currentMonthKey(userId);
+    const next = monthlyInvoiceCount + 1;
+    await storage.set(key, next);
+    setMonthlyInvoiceCount(next);
+  };
+
   const addInvoice = async (invoice: Invoice) => {
     let number: string;
     if (invoice.isQuote) {
       [number] = await nextQuoteNumber(quoteCounter);
     } else {
       [number] = await nextInvoiceNumber(counter);
+      await incrementMonthlyCount();
     }
     await persist([{ ...invoice, invoiceNumber: number }, ...invoices]);
   };
@@ -133,6 +162,7 @@ export function InvoicesProvider({ children }: { children: React.ReactNode }) {
       [number] = await nextQuoteNumber(quoteCounter);
     } else {
       [number] = await nextInvoiceNumber(counter);
+      await incrementMonthlyCount();
     }
     const copy: Invoice = {
       ...source,
@@ -154,6 +184,7 @@ export function InvoicesProvider({ children }: { children: React.ReactNode }) {
     const source = invoices.find((i) => i.id === id);
     if (!source || !source.isQuote) return null;
     const [number] = await nextInvoiceNumber(counter);
+    await incrementMonthlyCount();
     const updated: Invoice = {
       ...source,
       isQuote: false,
@@ -200,7 +231,8 @@ export function InvoicesProvider({ children }: { children: React.ReactNode }) {
   return (
     <InvoicesContext.Provider
       value={{
-        invoices, loading, addInvoice, updateInvoice, deleteInvoice,
+        invoices, loading, monthlyInvoiceCount, canCreateInvoice,
+        addInvoice, updateInvoice, deleteInvoice,
         duplicateInvoice, convertQuoteToInvoice, getInvoice,
         totalRevenue, monthRevenue, outstanding,
       }}

@@ -11,6 +11,7 @@ import { ScreenHeader } from "@/components/ScreenHeader";
 import { RevenueCard } from "@/components/RevenueCard";
 import { InvoiceRow } from "@/components/InvoiceRow";
 import { EmptyState } from "@/components/EmptyState";
+import { UsageBanner } from "@/components/UsageBanner";
 import { Invoice, InvoiceStatus } from "@/utils/types";
 import { sendReminderEmail } from "@/utils/emailApi";
 
@@ -134,6 +135,8 @@ export default function DashboardScreen() {
               overdueCount={overdueCount}
               currency={user?.currency}
             />
+
+            <UsageBanner />
 
             {showReminderBanner && (
               <View style={[styles.reminderBanner, { borderRadius: colors.radius }]}>
@@ -290,7 +293,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginLeft: 8,
     paddingVertical: 4,
-    ...(Platform.OS === "web" ? { outlineStyle: "none" as any } : {}),
+    ...(Platform.OS === "web" ? { outlineStyle: "none" as never } : {}),
   },
   filterRow: { paddingBottom: 14, gap: 8, paddingRight: 4 },
   filterChip: {
