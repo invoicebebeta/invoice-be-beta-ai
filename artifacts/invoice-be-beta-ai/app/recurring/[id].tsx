@@ -63,7 +63,7 @@ export default function RecurringFormScreen() {
   const [requireDeposit, setRequireDeposit] = useState(existing?.requireDeposit ?? false);
   const [depositPercent, setDepositPercent] = useState(existing?.depositPercent ?? 20);
   const [frequency, setFrequency] = useState<RecurringFrequency>(existing?.frequency ?? "monthly");
-  const [nextDueDate, setNextDueDate] = useState<string>(existing?.nextDueDate ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString());
+  const [nextDueDate, setNextDueDate] = useState<string>(existing?.nextDueDate ?? new Date().toISOString());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [autoSend, setAutoSend] = useState(existing?.autoSend ?? false);
   const [notes, setNotes] = useState(existing?.notes ?? "");
