@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "invoice-be-beta-ai",
+    "scheme": "invoicebebeta",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
@@ -14,9 +14,35 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "bundleIdentifier": "com.invoicebebeta.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Used to take a photo for your business logo.",
+        "NSPhotoLibraryUsageDescription": "Used to choose a photo for your business logo.",
+        "NSPhotoLibraryAddUsageDescription": "Used to save invoice PDFs to your photo library.",
+        "NSUserNotificationsUsageDescription": "We send you reminders when invoices are overdue."
+      },
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
-    "android": {},
+    "android": {
+      "package": "com.invoicebebeta.app",
+      "versionCode": 1,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE",
+        "android.permission.POST_NOTIFICATIONS"
+      ],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#ffffff"
+      }
+    },
     "web": {
       "favicon": "./assets/images/icon.png"
     },
@@ -28,11 +54,31 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Used to choose a photo for your business logo.",
+          "cameraPermission": "Used to take a photo for your business logo."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#3d5a4c",
+          "sounds": []
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "invoice-be-beta-ai"
+      }
     }
   }
 }

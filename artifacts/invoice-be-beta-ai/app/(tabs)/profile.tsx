@@ -546,6 +546,18 @@ export default function ProfileScreen() {
               }
             }}
           />
+          <SecondaryButton
+            title="Privacy policy"
+            icon="shield"
+            onPress={() => {
+              const url = "PRIVACY_POLICY_URL_PLACEHOLDER";
+              if (Platform.OS === "web") {
+                window.open(url, "_blank");
+              } else {
+                Linking.openURL(url);
+              }
+            }}
+          />
         </View>
 
         <View style={{ marginTop: 8 }}>
