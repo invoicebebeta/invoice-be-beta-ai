@@ -6,6 +6,11 @@ import { useSubscription } from '@/lib/revenuecat';
 
 export const FREE_TIER_LIMIT = 3;
 
+function getYYYYMM(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
 type InvoicesContextType = {
   invoices: Invoice[];
   loading: boolean;
@@ -31,9 +36,7 @@ function padNum(n: number): string {
 }
 
 function currentMonthKey(userId: string): string {
-  const now = new Date();
-  const mm = String(now.getMonth() + 1).padStart(2, '0');
-  return `monthlyInvoiceCount_${userId}_${now.getFullYear()}-${mm}`;
+  return `monthlyInvoiceCount_${userId}_${getYYYYMM()}`;
 }
 
 export function InvoicesProvider({ children }: { children: React.ReactNode }) {
@@ -46,6 +49,7 @@ export function InvoicesProvider({ children }: { children: React.ReactNode }) {
   const [counter, setCounter] = useState(0);
   const [quoteCounter, setQuoteCounter] = useState(0);
   const [monthlyInvoiceCount, setMonthlyInvoiceCount] = useState(0);
+  const [trackedMonth, setTrackedMonth] = useState(getYYYYMM);
 
   useEffect(() => {
     if (!userId) {
@@ -53,6 +57,7 @@ export function InvoicesProvider({ children }: { children: React.ReactNode }) {
       setCounter(0);
       setQuoteCounter(0);
       setMonthlyInvoiceCount(0);
+      setTrackedMonth(getYYYYMM());
       setLoading(false);
       return;
     }
@@ -96,12 +101,14 @@ export function InvoicesProvider({ children }: { children: React.ReactNode }) {
 
       const storedMonthly = (await storage.get<number>(MONTHLY_KEY)) ?? 0;
       setMonthlyInvoiceCount(storedMonthly);
+      setTrackedMonth(getYYYYMM());
 
       setLoading(false);
     })();
   }, [userId]);
 
-  const canCreateInvoice = isSubscribed || monthlyInvoiceCount < FREE_TIER_LIMIT;
+  const effectiveMonthlyCount = trackedMonth === getYYYYMM() ? monthlyInvoiceCount : 0;
+  const canCreateInvoice = isSubscribed || effectiveMonthlyCount < FREE_TIER_LIMIT;
 
   const persist = async (list: Invoice[]) => {
     if (!userId) return;
@@ -125,10 +132,12 @@ export function InvoicesProvider({ children }: { children: React.ReactNode }) {
 
   const incrementMonthlyCount = async () => {
     if (!userId) return;
-    const key = currentMonthKey(userId);
+    const currentMM = getYYYYMM();
+    const key = `monthlyInvoiceCount_${userId}_${currentMM}`;
     const current = (await storage.get<number>(key)) ?? 0;
     const next = current + 1;
     await storage.set(key, next);
+    setTrackedMonth(currentMM);
     setMonthlyInvoiceCount(next);
   };
 
@@ -234,7 +243,7 @@ export function InvoicesProvider({ children }: { children: React.ReactNode }) {
   return (
     <InvoicesContext.Provider
       value={{
-        invoices, loading, monthlyInvoiceCount, canCreateInvoice,
+        invoices, loading, monthlyInvoiceCount: effectiveMonthlyCount, canCreateInvoice,
         addInvoice, updateInvoice, deleteInvoice,
         duplicateInvoice, convertQuoteToInvoice, getInvoice,
         totalRevenue, monthRevenue, outstanding,

@@ -8,8 +8,9 @@ import * as Haptics from "expo-haptics";
 
 import { useColors } from "@/hooks/useColors";
 import { useRecurring } from "@/contexts/RecurringContext";
-import { useInvoices } from "@/contexts/InvoicesContext";
+import { useInvoices, FREE_TIER_LIMIT } from "@/contexts/InvoicesContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSubscription } from "@/lib/revenuecat";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { RecurringFrequency } from "@/utils/types";
@@ -32,7 +33,8 @@ export default function RecurringScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { templates, loading, updateTemplate, deleteTemplate, buildInvoice, markGenerated } = useRecurring();
-  const { addInvoice } = useInvoices();
+  const { addInvoice, canCreateInvoice, monthlyInvoiceCount } = useInvoices();
+  const { isSubscribed } = useSubscription();
   const { user } = useAuth();
   const processedRef = useRef<Set<string>>(new Set());
 
@@ -53,17 +55,23 @@ export default function RecurringScreen() {
       if (overdue.length === 0) return;
 
       (async () => {
+        let slotsRemaining = isSubscribed ? Infinity : Math.max(0, FREE_TIER_LIMIT - monthlyInvoiceCount);
+        const generated: typeof overdue = [];
         for (const tmpl of overdue) {
+          if (slotsRemaining <= 0) break;
           processedRef.current.add(tmpl.id);
           const invoice = buildInvoice(tmpl.id, user.id);
           if (!invoice) continue;
           await addInvoice(invoice);
           await markGenerated(tmpl.id);
           await sendInvoiceEmail(invoice, user);
+          generated.push(tmpl);
+          slotsRemaining--;
         }
+        if (generated.length === 0) return;
         if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        const names = overdue.map((t) => t.customerName).join(", ");
-        const count = overdue.length;
+        const names = generated.map((t) => t.customerName).join(", ");
+        const count = generated.length;
         Alert.alert(
           `${count} invoice${count > 1 ? "s" : ""} sent automatically`,
           `Invoice${count > 1 ? "s" : ""} for ${names} ${count > 1 ? "have" : "has"} been generated and emailed.`
@@ -73,6 +81,10 @@ export default function RecurringScreen() {
   );
 
   const onGenerate = async (templateId: string) => {
+    if (!canCreateInvoice) {
+      router.push("/paywall");
+      return;
+    }
     const tmpl = templates.find((t) => t.id === templateId);
     const invoice = buildInvoice(templateId, user?.id ?? "anonymous");
     if (!invoice || !tmpl) return;
