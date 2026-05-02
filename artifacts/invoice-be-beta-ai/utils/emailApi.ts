@@ -45,6 +45,7 @@ export async function sendInvoiceEmail(
         paymentLink,
         notes: invoice.notes,
         status: invoice.status,
+        bankDetails: user.bankDetails ?? null,
       }),
     });
     return await res.json();

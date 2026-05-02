@@ -12,6 +12,14 @@ function getResend(): Resend {
   return _resend;
 }
 
+export interface BankDetails {
+  accountHolderName: string;
+  sortCode: string;
+  accountNumber: string;
+  bankName?: string;
+  reference?: string;
+}
+
 export interface SendInvoiceParams {
   toEmail: string;
   toName: string;
@@ -29,6 +37,7 @@ export interface SendInvoiceParams {
   paymentLink?: string;
   notes?: string;
   status: string;
+  bankDetails?: BankDetails;
 }
 
 export interface SendPaymentConfirmationParams {
@@ -89,6 +98,20 @@ function buildInvoiceEmail(p: SendInvoiceParams): string {
     ? `<p style="margin:24px 0 0;padding:16px;background:#f9fafb;border-radius:8px;color:#6b7280;font-size:13px;line-height:1.6;"><strong>Notes:</strong> ${p.notes}</p>`
     : '';
 
+  const bankSection = p.bankDetails
+    ? `
+    <div style="margin:24px 0 0;padding:16px;background:#f9fafb;border-radius:8px;">
+      <p style="margin:0 0 10px;color:#374151;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Bank transfer details</p>
+      <table style="width:100%;border-collapse:collapse;">
+        ${p.bankDetails.bankName ? `<tr><td style="padding:5px 0;color:#6b7280;font-size:13px;width:45%;">Bank</td><td style="padding:5px 0;color:#1f2937;font-size:13px;">${p.bankDetails.bankName}</td></tr>` : ''}
+        <tr><td style="padding:5px 0;color:#6b7280;font-size:13px;">Account holder</td><td style="padding:5px 0;color:#1f2937;font-size:13px;">${p.bankDetails.accountHolderName}</td></tr>
+        <tr><td style="padding:5px 0;color:#6b7280;font-size:13px;">Sort code</td><td style="padding:5px 0;color:#1f2937;font-size:14px;font-weight:700;font-family:monospace;letter-spacing:1px;">${p.bankDetails.sortCode}</td></tr>
+        <tr><td style="padding:5px 0;color:#6b7280;font-size:13px;">Account number</td><td style="padding:5px 0;color:#1f2937;font-size:14px;font-weight:700;font-family:monospace;letter-spacing:1px;">${p.bankDetails.accountNumber}</td></tr>
+        ${p.bankDetails.reference ? `<tr><td style="padding:5px 0;color:#6b7280;font-size:13px;">Reference</td><td style="padding:5px 0;color:#1f2937;font-size:13px;">${p.bankDetails.reference}</td></tr>` : ''}
+      </table>
+    </div>`
+    : '';
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -132,6 +155,7 @@ function buildInvoiceEmail(p: SendInvoiceParams): string {
       ${depositNote}
       ${paymentSection}
       ${notesSection}
+      ${bankSection}
     </div>
     <div style="padding:20px 40px;background:#f9fafb;border-top:1px solid #eef0f3;">
       <p style="margin:0;color:#9ca3af;font-size:12px;text-align:center;">
@@ -191,6 +215,14 @@ function buildInvoiceText(p: SendInvoiceParams): string {
   }
   if (p.notes) {
     lines.push('', `Notes: ${p.notes}`);
+  }
+  if (p.bankDetails) {
+    lines.push('', 'Bank transfer details:');
+    if (p.bankDetails.bankName) lines.push(`  Bank: ${p.bankDetails.bankName}`);
+    lines.push(`  Account holder: ${p.bankDetails.accountHolderName}`);
+    lines.push(`  Sort code: ${p.bankDetails.sortCode}`);
+    lines.push(`  Account number: ${p.bankDetails.accountNumber}`);
+    if (p.bankDetails.reference) lines.push(`  Reference: ${p.bankDetails.reference}`);
   }
   lines.push('', `Sent by ${p.fromBusinessName} — ${p.fromEmail}`);
   return lines.join('\n');

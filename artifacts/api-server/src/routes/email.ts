@@ -23,6 +23,7 @@ router.post('/email/send-invoice', async (req, res) => {
     paymentLink,
     notes,
     status,
+    bankDetails,
   } = req.body;
 
   if (!toEmail || !fromBusinessName || !invoiceId || !lineItems || !total || !currency || !dueDate) {
@@ -56,6 +57,7 @@ router.post('/email/send-invoice', async (req, res) => {
       paymentLink,
       notes,
       status: status ?? 'draft',
+      bankDetails: bankDetails ?? undefined,
     });
     res.json({ ok: true });
   } catch (err: any) {
