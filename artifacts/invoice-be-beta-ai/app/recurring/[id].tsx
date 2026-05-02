@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Platform, Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
+import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -63,6 +64,8 @@ export default function RecurringFormScreen() {
   const [depositPercent, setDepositPercent] = useState(existing?.depositPercent ?? 20);
   const [frequency, setFrequency] = useState<RecurringFrequency>(existing?.frequency ?? "monthly");
   const [nextDueDate, setNextDueDate] = useState<string>(existing?.nextDueDate ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [autoSend, setAutoSend] = useState(existing?.autoSend ?? false);
   const [notes, setNotes] = useState(existing?.notes ?? "");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
@@ -106,6 +109,7 @@ export default function RecurringFormScreen() {
       notes: notes.trim() || undefined,
       frequency,
       nextDueDate,
+      autoSend,
       isActive: existing?.isActive ?? true,
       createdAt: existing?.createdAt ?? new Date().toISOString(),
       lastGeneratedAt: existing?.lastGeneratedAt,
@@ -128,8 +132,9 @@ export default function RecurringFormScreen() {
     year: "numeric",
   });
 
-  const shiftDate = (days: number) => {
-    setNextDueDate((d) => new Date(new Date(d).getTime() + days * 24 * 60 * 60 * 1000).toISOString());
+  const onDateChange = (event: DateTimePickerEvent, date?: Date) => {
+    if (Platform.OS === "android") setShowDatePicker(false);
+    if (date) setNextDueDate(date.toISOString());
   };
 
   return (
@@ -227,34 +232,60 @@ export default function RecurringFormScreen() {
         </View>
 
         <Text style={[styles.section, { color: colors.mutedForeground, marginTop: 16 }]}>First due date</Text>
-        <View
-          style={[
-            styles.dateCard,
-            { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius },
-          ]}
-        >
-          <Feather name="calendar" size={16} color={colors.primary} />
-          <Text style={[styles.dateLabel, { color: colors.foreground }]}>{dueDateDisplay}</Text>
-          <View style={styles.dateControls}>
-            <Pressable
-              onPress={() => shiftDate(-7)}
-              style={({ pressed }) => [styles.dateBtn, { borderColor: colors.border, borderRadius: colors.radius, opacity: pressed ? 0.7 : 1 }]}
-            >
-              <Text style={[styles.dateBtnText, { color: colors.foreground }]}>-7d</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => shiftDate(7)}
-              style={({ pressed }) => [styles.dateBtn, { borderColor: colors.border, borderRadius: colors.radius, opacity: pressed ? 0.7 : 1 }]}
-            >
-              <Text style={[styles.dateBtnText, { color: colors.foreground }]}>+7d</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => shiftDate(30)}
-              style={({ pressed }) => [styles.dateBtn, { borderColor: colors.border, borderRadius: colors.radius, opacity: pressed ? 0.7 : 1 }]}
-            >
-              <Text style={[styles.dateBtnText, { color: colors.foreground }]}>+30d</Text>
-            </Pressable>
+        {Platform.OS === "web" ? (
+          <View style={[styles.dateCard, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
+            <Feather name="calendar" size={16} color={colors.primary} />
+            {/* @ts-ignore web-only */}
+            <input
+              type="date"
+              value={nextDueDate.split("T")[0]}
+              onChange={(e: any) => {
+                if (e.target.value) setNextDueDate(new Date(e.target.value + "T12:00:00").toISOString());
+              }}
+              style={{ flex: 1, border: "none", background: "transparent", fontFamily: "Inter_600SemiBold", fontSize: 15, color: colors.foreground, outline: "none", cursor: "pointer" }}
+            />
           </View>
+        ) : (
+          <>
+            <Pressable
+              onPress={() => setShowDatePicker((v) => !v)}
+              style={({ pressed }) => [
+                styles.dateCard,
+                { backgroundColor: colors.card, borderColor: showDatePicker ? colors.primary : colors.border, borderRadius: colors.radius, opacity: pressed ? 0.85 : 1 },
+              ]}
+            >
+              <Feather name="calendar" size={16} color={colors.primary} />
+              <Text style={[styles.dateLabel, { color: colors.foreground }]}>{dueDateDisplay}</Text>
+              <Feather name={showDatePicker ? "chevron-up" : "chevron-down"} size={16} color={colors.mutedForeground} />
+            </Pressable>
+            {showDatePicker && (
+              <DateTimePicker
+                value={new Date(nextDueDate)}
+                mode="date"
+                display={Platform.OS === "ios" ? "inline" : "default"}
+                onChange={onDateChange}
+                minimumDate={new Date()}
+              />
+            )}
+          </>
+        )}
+
+        <Text style={[styles.section, { color: colors.mutedForeground, marginTop: 16 }]}>Auto-send</Text>
+        <View style={[styles.toggleRow, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
+          <View style={{ flex: 1, marginRight: 12 }}>
+            <Text style={[styles.toggleLabel, { color: colors.foreground }]}>Email customer automatically</Text>
+            <Text style={[styles.toggleSub, { color: colors.mutedForeground }]}>
+              {autoSend
+                ? `Invoice will be emailed to ${customerEmail || "your customer"} each time it's generated`
+                : "You'll send the invoice manually after generating it"}
+            </Text>
+          </View>
+          <Switch
+            value={autoSend}
+            onValueChange={setAutoSend}
+            trackColor={{ false: colors.border, true: colors.primary }}
+            thumbColor={colors.primaryForeground}
+          />
         </View>
 
         <Text style={[styles.section, { color: colors.mutedForeground, marginTop: 16 }]}>Deposit</Text>
@@ -317,12 +348,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginBottom: 14,
     gap: 10,
-    flexWrap: "wrap",
   },
   dateLabel: { fontFamily: "Inter_600SemiBold", fontSize: 15, flex: 1 },
-  dateControls: { flexDirection: "row", gap: 6 },
-  dateBtn: { paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1 },
-  dateBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 12 },
+  toggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
+    borderWidth: 1,
+    marginBottom: 14,
+  },
+  toggleLabel: { fontFamily: "Inter_600SemiBold", fontSize: 15, marginBottom: 3 },
+  toggleSub: { fontFamily: "Inter_400Regular", fontSize: 12, lineHeight: 17 },
   notesInput: { minHeight: 80, paddingHorizontal: 14, paddingVertical: 12, borderWidth: 1, fontFamily: "Inter_400Regular", fontSize: 14, textAlignVertical: "top", marginBottom: 6 },
   totalRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 18, borderTopWidth: StyleSheet.hairlineWidth, marginTop: 10, marginBottom: 18 },
   totalLabel: { fontFamily: "Inter_500Medium", fontSize: 14, textTransform: "uppercase", letterSpacing: 0.4 },

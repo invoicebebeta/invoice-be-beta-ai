@@ -13,6 +13,7 @@ import { ScreenHeader } from "@/components/ScreenHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { RecurringFrequency } from "@/utils/types";
 import { formatMoney, calculateTotal } from "@/utils/calculations";
+import { sendInvoiceEmail } from "@/utils/emailApi";
 
 const FREQ_LABEL: Record<RecurringFrequency, string> = {
   weekly: "Weekly",
@@ -42,11 +43,15 @@ export default function RecurringScreen() {
   );
 
   const onGenerate = async (templateId: string) => {
+    const tmpl = templates.find((t) => t.id === templateId);
     const invoice = buildInvoice(templateId, user?.id ?? "anonymous");
-    if (!invoice) return;
+    if (!invoice || !tmpl) return;
     if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     await addInvoice(invoice);
     await markGenerated(templateId);
+    if (tmpl.autoSend) {
+      await sendInvoiceEmail(invoice, user ?? null);
+    }
     router.push(`/invoice/${invoice.id}`);
   };
 
@@ -146,6 +151,12 @@ export default function RecurringScreen() {
                       Next due {new Date(tmpl.nextDueDate).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
                     </Text>
                   </View>
+                  {tmpl.autoSend && (
+                    <View style={styles.metaItem}>
+                      <Feather name="mail" size={12} color={colors.primary} />
+                      <Text style={[styles.metaText, { color: colors.primary }]}>Auto-send</Text>
+                    </View>
+                  )}
                 </View>
 
                 <View style={styles.actions}>

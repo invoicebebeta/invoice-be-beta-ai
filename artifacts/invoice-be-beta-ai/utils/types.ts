@@ -64,6 +64,7 @@ export type RecurringTemplate = {
   frequency: RecurringFrequency;
   nextDueDate: string;
   isActive: boolean;
+  autoSend: boolean;
   createdAt: string;
   lastGeneratedAt?: string;
 };
