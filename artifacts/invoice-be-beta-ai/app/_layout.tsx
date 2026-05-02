@@ -12,7 +12,7 @@ import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { ActivityIndicator, Alert, View } from "react-native";
+import { ActivityIndicator, View } from "react-native";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
@@ -30,7 +30,7 @@ try {
   initializeRevenueCat();
 } catch (err: unknown) {
   const message = err instanceof Error ? err.message : "Unknown error";
-  Alert.alert("RevenueCat Unavailable", message);
+  console.error("[RevenueCat] Initialization failed:", message);
 }
 
 const queryClient = new QueryClient();
@@ -76,7 +76,7 @@ function AuthGate() {
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="(onboarding)" options={{ headerShown: false, presentation: "fullScreenModal" }} />
-      <Stack.Screen name="paywall" options={{ headerShown: false, presentation: "modal" }} />
+      <Stack.Screen name="paywall" options={{ headerShown: false, presentation: "fullScreenModal" }} />
       <Stack.Screen name="invoice/[id]" options={{ title: "Invoice" }} />
       <Stack.Screen name="customer/[email]" options={{ title: "Customer" }} />
       <Stack.Screen name="customers/index" options={{ title: "Customers" }} />
