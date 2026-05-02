@@ -5,6 +5,7 @@ import {
   getConnectedAccount,
   upsertConnectedAccount,
   deleteConnectedAccount,
+  getPushTokensByUserId,
 } from '../connectDb';
 
 const router: IRouter = Router();
@@ -105,7 +106,7 @@ router.post('/stripe/invoice/checkout', async (req, res) => {
         mode: 'payment',
         success_url: `${baseUrl}/payment-success`,
         cancel_url: `${baseUrl}/payment-cancelled`,
-        metadata: { invoiceRef: invoiceRef ?? '' },
+        metadata: { invoiceRef: invoiceRef ?? '', userId },
       },
       { stripeAccount: accountId }
     );
@@ -114,6 +115,61 @@ router.post('/stripe/invoice/checkout', async (req, res) => {
     logger.error({ err: err.message }, 'Stripe Checkout session creation failed');
     res.status(400).json({ error: err.message ?? 'Failed to create Stripe Checkout session.' });
   }
+});
+
+router.post('/stripe/webhook', async (req, res) => {
+  const stripe = await getUncachableStripeClient();
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET ?? '';
+  let event: any;
+
+  if (webhookSecret) {
+    const sig = req.headers['stripe-signature'];
+    try {
+      event = stripe.webhooks.constructEvent(req.body, sig as string, webhookSecret);
+    } catch (err: any) {
+      logger.warn({ err: err.message }, 'Stripe webhook signature verification failed');
+      return res.status(400).json({ error: `Webhook error: ${err.message}` });
+    }
+  } else {
+    event = req.body;
+  }
+
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data?.object as any;
+    const userId = session?.metadata?.userId as string | undefined;
+    const invoiceRef = session?.metadata?.invoiceRef as string | undefined;
+    const amountTotal = session?.amount_total ? session.amount_total / 100 : null;
+
+    logger.info({ userId, invoiceRef, amountTotal }, 'Stripe checkout.session.completed');
+
+    if (userId) {
+      try {
+        const tokens = await getPushTokensByUserId(userId);
+        if (tokens.length) {
+          const title = 'Payment received 💰';
+          const body = invoiceRef
+            ? `Invoice ${invoiceRef} has been paid${amountTotal ? ` — ${amountTotal}` : ''}.`
+            : 'A customer has paid an invoice.';
+          await fetch('https://exp.host/--/api/v2/push/send', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'Accept-Encoding': 'gzip, deflate',
+            },
+            body: JSON.stringify(
+              tokens.map((token) => ({ to: token, sound: 'default', title, body, data: { invoiceRef } }))
+            ),
+          });
+          logger.info({ userId, sent: tokens.length }, 'Push notifications sent for payment');
+        }
+      } catch (err: any) {
+        logger.error({ err: err.message }, 'Failed to send push notification for payment');
+      }
+    }
+  }
+
+  res.json({ received: true });
 });
 
 export default router;

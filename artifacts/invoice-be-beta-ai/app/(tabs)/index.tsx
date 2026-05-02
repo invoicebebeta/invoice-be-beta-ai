@@ -16,6 +16,8 @@ import { UsageBanner } from "@/components/UsageBanner";
 import { Invoice, InvoiceStatus } from "@/utils/types";
 import { sendReminderEmail } from "@/utils/emailApi";
 
+type MonthBar = { label: string; revenue: number };
+
 let paywallAutoShownForUserId: string | null = null;
 
 type FilterKey = "all" | "overdue" | "quotes" | InvoiceStatus;
@@ -70,6 +72,44 @@ export default function DashboardScreen() {
   }, [invoices]);
 
   const overdueCount = useMemo(() => invoices.filter(isOverdueInvoice).length, [invoices]);
+
+  const monthlyBars = useMemo<MonthBar[]>(() => {
+    const now = new Date();
+    const bars: MonthBar[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const start = d.getTime();
+      const end = new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime();
+      const label = d.toLocaleString("default", { month: "short" });
+      const revenue = invoices.reduce((sum, inv) => {
+        if (inv.isQuote) return sum;
+        const t = new Date(inv.createdAt).getTime();
+        if (t < start || t >= end) return sum;
+        if (inv.status === "fully_paid") return sum + inv.total;
+        if (inv.status === "deposit_paid") return sum + inv.depositAmount;
+        return sum;
+      }, 0);
+      bars.push({ label, revenue });
+    }
+    return bars;
+  }, [invoices]);
+
+  const avgInvoiceValue = useMemo(() => {
+    const paid = invoices.filter((inv) => !inv.isQuote && inv.status === "fully_paid");
+    if (!paid.length) return 0;
+    return paid.reduce((s, inv) => s + inv.total, 0) / paid.length;
+  }, [invoices]);
+
+  const paidThisMonth = useMemo(() => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    return invoices.filter(
+      (inv) =>
+        !inv.isQuote &&
+        inv.status === "fully_paid" &&
+        new Date(inv.createdAt).getTime() >= start
+    ).length;
+  }, [invoices]);
 
   const showReminderBanner = !reminderDismissed && overdueUnreminded.length > 0;
 
@@ -148,6 +188,9 @@ export default function DashboardScreen() {
               outstanding={outstanding}
               overdueCount={overdueCount}
               currency={user?.currency}
+              avgInvoiceValue={avgInvoiceValue}
+              paidThisMonth={paidThisMonth}
+              monthlyBars={monthlyBars}
             />
 
             <UsageBanner />
