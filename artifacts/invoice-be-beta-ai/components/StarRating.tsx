@@ -1,9 +1,10 @@
 import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
-import { Feather } from '@expo/vector-icons';
-import { useColors } from '@/hooks/useColors';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { FontAwesome } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { Platform } from 'react-native';
+
+const STAR_COLOR = '#F5A623';
+const EMPTY_COLOR = '#D1D5DB';
 
 type Props = {
   value: number;
@@ -13,20 +14,30 @@ type Props = {
 };
 
 export function StarRating({ value, onChange, size = 32, readOnly }: Props) {
-  const colors = useColors();
   return (
     <View style={styles.row}>
       {[1, 2, 3, 4, 5].map((n) => {
-        const filled = n <= Math.round(value);
-        const Inner = (
-          <Feather
-            name={filled ? 'star' : 'star'}
-            size={size}
-            color={filled ? colors.accent : colors.muted}
-            style={{ marginHorizontal: 4 }}
-          />
+        const fillFraction = Math.min(1, Math.max(0, value - (n - 1)));
+        const filledWidth = Math.round(fillFraction * size);
+
+        const StarDisplay = (
+          <View style={{ width: size, height: size, marginHorizontal: 2 }}>
+            <FontAwesome
+              name="star-o"
+              size={size}
+              color={EMPTY_COLOR}
+              style={{ position: 'absolute' }}
+            />
+            {filledWidth > 0 && (
+              <View style={{ overflow: 'hidden', width: filledWidth, height: size }}>
+                <FontAwesome name="star" size={size} color={STAR_COLOR} />
+              </View>
+            )}
+          </View>
         );
-        if (readOnly || !onChange) return <View key={n}>{Inner}</View>;
+
+        if (readOnly || !onChange) return <View key={n}>{StarDisplay}</View>;
+
         return (
           <Pressable
             key={n}
@@ -36,7 +47,7 @@ export function StarRating({ value, onChange, size = 32, readOnly }: Props) {
             }}
             hitSlop={8}
           >
-            {Inner}
+            {StarDisplay}
           </Pressable>
         );
       })}
