@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useInvoices } from "@/contexts/InvoicesContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSubscription } from "@/lib/revenuecat";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { RevenueCard } from "@/components/RevenueCard";
 import { InvoiceRow } from "@/components/InvoiceRow";
@@ -14,6 +15,8 @@ import { EmptyState } from "@/components/EmptyState";
 import { UsageBanner } from "@/components/UsageBanner";
 import { Invoice, InvoiceStatus } from "@/utils/types";
 import { sendReminderEmail } from "@/utils/emailApi";
+
+let paywallAutoShownForUserId: string | null = null;
 
 type FilterKey = "all" | "overdue" | "quotes" | InvoiceStatus;
 
@@ -36,13 +39,24 @@ export default function DashboardScreen() {
   const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { invoices, totalRevenue, monthRevenue, outstanding, updateInvoice } = useInvoices();
+  const { invoices, totalRevenue, monthRevenue, outstanding, updateInvoice, canCreateInvoice, loading } = useInvoices();
   const { user } = useAuth();
+  const { isLoading: subscriptionLoading } = useSubscription();
 
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<FilterKey>("all");
   const [reminderLoading, setReminderLoading] = useState(false);
   const [reminderDismissed, setReminderDismissed] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (loading || subscriptionLoading) return;
+      if (!canCreateInvoice && user?.id && paywallAutoShownForUserId !== user.id) {
+        paywallAutoShownForUserId = user.id;
+        router.push("/paywall");
+      }
+    }, [loading, subscriptionLoading, canCreateInvoice, user?.id, router])
+  );
 
   const topInset = Platform.OS === "web" ? 67 : insets.top;
   const tabBar = Platform.OS === "web" ? 84 : 84;
