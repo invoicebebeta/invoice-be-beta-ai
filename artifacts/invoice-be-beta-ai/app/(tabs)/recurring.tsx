@@ -1,7 +1,8 @@
-import React, { useMemo } from "react";
+import React, { useCallback, useMemo, useRef } from "react";
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 
@@ -30,9 +31,10 @@ export default function RecurringScreen() {
   const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { templates, updateTemplate, deleteTemplate, buildInvoice, markGenerated } = useRecurring();
+  const { templates, loading, updateTemplate, deleteTemplate, buildInvoice, markGenerated } = useRecurring();
   const { addInvoice } = useInvoices();
   const { user } = useAuth();
+  const processedRef = useRef<Set<string>>(new Set());
 
   const topInset = Platform.OS === "web" ? 67 : insets.top;
   const tabBar = 84;
@@ -40,6 +42,34 @@ export default function RecurringScreen() {
   const sorted = useMemo(
     () => [...templates].sort((a, b) => new Date(a.nextDueDate).getTime() - new Date(b.nextDueDate).getTime()),
     [templates]
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      if (loading || !user) return;
+      const overdue = templates.filter(
+        (t) => t.isActive && t.autoSend && new Date(t.nextDueDate).getTime() <= Date.now() && !processedRef.current.has(t.id)
+      );
+      if (overdue.length === 0) return;
+
+      (async () => {
+        for (const tmpl of overdue) {
+          processedRef.current.add(tmpl.id);
+          const invoice = buildInvoice(tmpl.id, user.id);
+          if (!invoice) continue;
+          await addInvoice(invoice);
+          await markGenerated(tmpl.id);
+          await sendInvoiceEmail(invoice, user);
+        }
+        if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        const names = overdue.map((t) => t.customerName).join(", ");
+        const count = overdue.length;
+        Alert.alert(
+          `${count} invoice${count > 1 ? "s" : ""} sent automatically`,
+          `Invoice${count > 1 ? "s" : ""} for ${names} ${count > 1 ? "have" : "has"} been generated and emailed.`
+        );
+      })();
+    }, [templates, loading, user])
   );
 
   const onGenerate = async (templateId: string) => {
