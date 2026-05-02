@@ -314,6 +314,22 @@ export default function ProfileScreen() {
           />
         </View>
 
+        <Text style={[styles.section, { color: colors.mutedForeground, marginTop: 8 }]}>Help</Text>
+        <View style={{ marginBottom: 24, gap: 10 }}>
+          <SecondaryButton
+            title="Contact support"
+            icon="mail"
+            onPress={() => {
+              const url = "mailto:support@invoicebebeta.com?subject=Invoice%20Be%20Beta%20Support";
+              if (Platform.OS === "web") {
+                window.open(url, "_blank");
+              } else {
+                Linking.openURL(url);
+              }
+            }}
+          />
+        </View>
+
         <View style={{ marginTop: 8 }}>
           <SecondaryButton title="Sign out" onPress={signOut} icon="log-out" />
         </View>
