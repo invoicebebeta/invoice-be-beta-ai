@@ -77,6 +77,10 @@ export default function InvoiceDetailScreen() {
     setConvertLoading(true);
     const converted = await convertQuoteToInvoice(invoice.id);
     setConvertLoading(false);
+    if (converted === 'limit_reached') {
+      router.push('/paywall');
+      return;
+    }
     if (converted) {
       haptic();
       showAlert("Quote converted", `${invoice.invoiceNumber} has been converted to invoice ${converted.invoiceNumber}. You can now send it to your customer.`);
@@ -207,6 +211,10 @@ export default function InvoiceDetailScreen() {
     setPendingAction("duplicate");
     const copy = await duplicateInvoice(invoice.id);
     setPendingAction(null);
+    if (copy === 'limit_reached') {
+      router.push('/paywall');
+      return;
+    }
     if (copy) {
       haptic();
       router.replace(`/invoice/${copy.id}`);

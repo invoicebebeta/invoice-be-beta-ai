@@ -14,8 +14,8 @@ type InvoicesContextType = {
   addInvoice: (invoice: Invoice) => Promise<void>;
   updateInvoice: (id: string, patch: Partial<Invoice>) => Promise<void>;
   deleteInvoice: (id: string) => Promise<void>;
-  duplicateInvoice: (id: string) => Promise<Invoice | null>;
-  convertQuoteToInvoice: (id: string) => Promise<Invoice | null>;
+  duplicateInvoice: (id: string) => Promise<Invoice | null | 'limit_reached'>;
+  convertQuoteToInvoice: (id: string) => Promise<Invoice | null | 'limit_reached'>;
   getInvoice: (id: string) => Invoice | undefined;
   totalRevenue: number;
   monthRevenue: number;
@@ -126,7 +126,8 @@ export function InvoicesProvider({ children }: { children: React.ReactNode }) {
   const incrementMonthlyCount = async () => {
     if (!userId) return;
     const key = currentMonthKey(userId);
-    const next = monthlyInvoiceCount + 1;
+    const current = (await storage.get<number>(key)) ?? 0;
+    const next = current + 1;
     await storage.set(key, next);
     setMonthlyInvoiceCount(next);
   };
@@ -151,9 +152,10 @@ export function InvoicesProvider({ children }: { children: React.ReactNode }) {
     await persist(invoices.filter((inv) => inv.id !== id));
   };
 
-  const duplicateInvoice = async (id: string) => {
+  const duplicateInvoice = async (id: string): Promise<Invoice | null | 'limit_reached'> => {
     const source = invoices.find((i) => i.id === id);
     if (!source) return null;
+    if (!source.isQuote && !canCreateInvoice) return 'limit_reached';
     const clonedItems: LineItem[] = source.lineItems.map((li) => ({ ...li, id: newId('li') }));
     const newInvoiceId = newId('inv');
     const dueDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
@@ -180,9 +182,10 @@ export function InvoicesProvider({ children }: { children: React.ReactNode }) {
     return copy;
   };
 
-  const convertQuoteToInvoice = async (id: string) => {
+  const convertQuoteToInvoice = async (id: string): Promise<Invoice | null | 'limit_reached'> => {
     const source = invoices.find((i) => i.id === id);
     if (!source || !source.isQuote) return null;
+    if (!canCreateInvoice) return 'limit_reached';
     const [number] = await nextInvoiceNumber(counter);
     await incrementMonthlyCount();
     const updated: Invoice = {

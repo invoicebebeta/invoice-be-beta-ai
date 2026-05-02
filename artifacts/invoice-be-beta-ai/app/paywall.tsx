@@ -202,6 +202,14 @@ export default function PaywallScreen() {
           </>
         )}
 
+        {/* Maybe later */}
+        <Pressable
+          onPress={() => router.back()}
+          style={({ pressed }) => [styles.maybeLaterBtn, { opacity: pressed ? 0.6 : 1 }]}
+        >
+          <Text style={[styles.maybeLaterText, { color: colors.mutedForeground }]}>Maybe later</Text>
+        </Pressable>
+
         {/* Restore */}
         <Pressable
           onPress={handleRestore}
@@ -329,7 +337,9 @@ const styles = StyleSheet.create({
   planBtn: { paddingVertical: 13, alignItems: "center" },
   planBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 15 },
   noPlans: { fontFamily: "Inter_400Regular", fontSize: 14, textAlign: "center", marginVertical: 24 },
-  restoreBtn: { alignItems: "center", paddingVertical: 14 },
+  maybeLaterBtn: { alignItems: "center", paddingVertical: 14 },
+  maybeLaterText: { fontFamily: "Inter_600SemiBold", fontSize: 15 },
+  restoreBtn: { alignItems: "center", paddingVertical: 10 },
   restoreText: { fontFamily: "Inter_500Medium", fontSize: 14 },
   restoreResult: {
     flexDirection: "row",
