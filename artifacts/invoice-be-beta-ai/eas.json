@@ -19,8 +19,12 @@
     },
     "production": {
       "autoIncrement": true,
+      "image": "latest",
       "ios": {
         "simulator": false
+      },
+      "env": {
+        "PNPM_FLAGS": "--no-frozen-lockfile"
       }
     }
   },
