@@ -1,31 +1,41 @@
-import React from "react";
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useMemo } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/contexts/AuthContext";
+import { useInvoices } from "@/contexts/InvoicesContext";
 import { storage } from "@/utils/storage";
 
-const STEPS = [
+const ALL_STEPS: {
+  key: string;
+  icon: React.ComponentProps<typeof Feather>["name"];
+  title: string;
+  description: string;
+}[] = [
   {
-    icon: "image" as const,
+    key: "logo",
+    icon: "image",
     title: "Add your logo",
     description: "Make invoices look professional with your brand.",
   },
   {
-    icon: "credit-card" as const,
+    key: "stripe",
+    icon: "credit-card",
     title: "Connect Stripe",
     description: "Let customers pay invoices by card — money goes straight to you.",
   },
   {
-    icon: "dollar-sign" as const,
+    key: "bank",
+    icon: "dollar-sign",
     title: "Add bank details",
     description: "Share your sort code and account number for bank transfers.",
   },
   {
-    icon: "file-text" as const,
+    key: "invoice",
+    icon: "file-text",
     title: "Create your first invoice",
     description: "Send it in seconds and get paid faster.",
   },
@@ -36,13 +46,46 @@ export default function OnboardingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const { invoices } = useInvoices();
 
-  const dismiss = async () => {
-    if (user) {
-      await storage.set(`onboarding_seen_${user.id}`, true);
-    }
+  const remainingSteps = useMemo(() => {
+    if (!user) return ALL_STEPS;
+    const hasRealInvoice = invoices.some((inv) => !inv.isQuote);
+    return ALL_STEPS.filter((step) => {
+      switch (step.key) {
+        case "logo":    return !user.logoUri;
+        case "stripe":  return !user.stripeConnectedAccountId;
+        case "bank":    return !user.bankDetails?.accountNumber;
+        case "invoice": return !hasRealInvoice;
+        default:        return true;
+      }
+    });
+  }, [user, invoices]);
+
+  const dismissAllDone = async () => {
+    if (user) await storage.set(`onboarding_seen_${user.id}`, true);
     router.replace("/(tabs)");
   };
+
+  const dismissForNow = () => {
+    router.replace("/(tabs)");
+  };
+
+  useEffect(() => {
+    if (remainingSteps.length === 0) {
+      dismissAllDone();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [remainingSteps.length]);
+
+  if (remainingSteps.length === 0) return null;
+
+  const totalDone = ALL_STEPS.length - remainingSteps.length;
+
+  const subtitle =
+    totalDone === 0
+      ? `${user?.businessName ? `Hi ${user.businessName}, you're` : "You're"} all set up. Here's what to do first to get the most out of the app.`
+      : `${totalDone} of ${ALL_STEPS.length} done — keep going, you're nearly there.`;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -58,16 +101,30 @@ export default function OnboardingScreen() {
           <Feather name="zap" size={18} color={colors.primaryForeground} />
         </View>
         <Text style={[styles.title, { color: colors.foreground }]}>
-          Welcome to Invoice Be Beta
+          {totalDone === 0 ? "Welcome to Invoice Be Beta" : "Almost set up"}
         </Text>
         <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-          {user?.businessName ? `Hi ${user.businessName}, you're` : "You're"} all set up. Here's what to do first to get the most out of the app.
+          {subtitle}
         </Text>
 
-        <View style={styles.steps}>
-          {STEPS.map((step, i) => (
+        {totalDone > 0 && (
+          <View style={[styles.progressTrack, { backgroundColor: colors.muted }]}>
             <View
-              key={step.title}
+              style={[
+                styles.progressFill,
+                {
+                  backgroundColor: colors.primary,
+                  width: `${(totalDone / ALL_STEPS.length) * 100}%` as `${number}%`,
+                },
+              ]}
+            />
+          </View>
+        )}
+
+        <View style={styles.steps}>
+          {remainingSteps.map((step, i) => (
+            <View
+              key={step.key}
               style={[
                 styles.stepCard,
                 {
@@ -78,14 +135,18 @@ export default function OnboardingScreen() {
               ]}
             >
               <View style={[styles.stepNum, { backgroundColor: colors.primary }]}>
-                <Text style={[styles.stepNumText, { color: colors.primaryForeground }]}>{i + 1}</Text>
+                <Text style={[styles.stepNumText, { color: colors.primaryForeground }]}>
+                  {i + 1}
+                </Text>
               </View>
               <View style={[styles.stepIcon, { backgroundColor: colors.muted }]}>
                 <Feather name={step.icon} size={18} color={colors.foreground} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.stepTitle, { color: colors.foreground }]}>{step.title}</Text>
-                <Text style={[styles.stepDesc, { color: colors.mutedForeground }]}>{step.description}</Text>
+                <Text style={[styles.stepDesc, { color: colors.mutedForeground }]}>
+                  {step.description}
+                </Text>
               </View>
             </View>
           ))}
@@ -109,7 +170,7 @@ export default function OnboardingScreen() {
         ]}
       >
         <Pressable
-          onPress={dismiss}
+          onPress={dismissForNow}
           style={({ pressed }) => [
             styles.cta,
             {
@@ -119,7 +180,9 @@ export default function OnboardingScreen() {
             },
           ]}
         >
-          <Text style={[styles.ctaText, { color: colors.primaryForeground }]}>Let's go</Text>
+          <Text style={[styles.ctaText, { color: colors.primaryForeground }]}>
+            {totalDone === 0 ? "Let's go" : "Continue"}
+          </Text>
           <Feather name="arrow-right" size={18} color={colors.primaryForeground} />
         </Pressable>
       </View>
@@ -137,7 +200,17 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   title: { fontFamily: "Inter_700Bold", fontSize: 28, marginBottom: 10, lineHeight: 34 },
-  subtitle: { fontFamily: "Inter_400Regular", fontSize: 15, lineHeight: 22, marginBottom: 32 },
+  subtitle: { fontFamily: "Inter_400Regular", fontSize: 15, lineHeight: 22, marginBottom: 16 },
+  progressTrack: {
+    height: 4,
+    borderRadius: 2,
+    overflow: "hidden",
+    marginBottom: 24,
+  },
+  progressFill: {
+    height: 4,
+    borderRadius: 2,
+  },
   steps: { gap: 10, marginBottom: 24 },
   stepCard: {
     flexDirection: "row",
