@@ -50,4 +50,9 @@ channel = "stable-25_05"
 [userenv]
 
 [userenv.shared]
+
+[userenv.development]
+STRIPE_CONNECT_CLIENT_ID = "ca_UPQquxPmXaA176A5VmeM6ZMLywBDIElj"
+
+[userenv.production]
 STRIPE_CONNECT_CLIENT_ID = "ca_UPcSp4vUWfJjrHXRVwZrIPpx0nJMUBr6"
