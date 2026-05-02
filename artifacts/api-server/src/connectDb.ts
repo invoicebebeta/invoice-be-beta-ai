@@ -58,8 +58,7 @@ export async function ensurePushTokensTable(): Promise<void> {
         id SERIAL PRIMARY KEY,
         user_id TEXT NOT NULL,
         token TEXT NOT NULL UNIQUE,
-        created_at TIMESTAMP DEFAULT NOW(),
-        CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES app_users(id) ON DELETE CASCADE
+        created_at TIMESTAMP DEFAULT NOW()
       )
     `);
   } finally {

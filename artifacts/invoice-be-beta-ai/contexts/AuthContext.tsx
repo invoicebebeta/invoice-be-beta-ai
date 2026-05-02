@@ -1,7 +1,9 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 import { storage } from '../utils/storage';
 import { BankDetails, User } from '../utils/types';
 import { apiSignIn, apiSignUp, apiUpdateLogo } from '../utils/authApi';
+import { registerPushToken } from '../utils/pushNotifications';
 
 type AuthContextType = {
   user: User | null;
@@ -44,6 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const newUser: User = { ...result.user, currency: 'USD' };
     await storage.set(CURRENT_KEY, newUser);
     setUser(newUser);
+    if (Platform.OS !== 'web') registerPushToken(newUser.id).catch(() => {});
     return { ok: true };
   };
 
@@ -60,6 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await storage.set(CURRENT_KEY, merged);
     setUser(merged);
     if (merged.logoUri) apiUpdateLogo(merged.id, merged.logoUri);
+    if (Platform.OS !== 'web') registerPushToken(merged.id).catch(() => {});
     return { ok: true };
   };
 
