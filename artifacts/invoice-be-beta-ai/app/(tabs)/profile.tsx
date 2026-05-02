@@ -550,7 +550,7 @@ export default function ProfileScreen() {
             title="Privacy policy"
             icon="shield"
             onPress={() => {
-              const url = "PRIVACY_POLICY_URL_PLACEHOLDER";
+              const url = "https://www.invoicebebeta.com/privacy-policy";
               if (Platform.OS === "web") {
                 window.open(url, "_blank");
               } else {
