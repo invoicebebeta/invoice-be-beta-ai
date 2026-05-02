@@ -24,6 +24,7 @@ router.post('/email/send-invoice', async (req, res) => {
     notes,
     status,
     bankDetails,
+    invoiceColor,
   } = req.body;
 
   if (!toEmail || !fromBusinessName || !invoiceId || !lineItems || !total || !currency || !dueDate) {
@@ -58,6 +59,7 @@ router.post('/email/send-invoice', async (req, res) => {
       notes,
       status: status ?? 'draft',
       bankDetails: bankDetails ?? undefined,
+      invoiceColor: invoiceColor ?? undefined,
     });
     res.json({ ok: true });
   } catch (err: any) {

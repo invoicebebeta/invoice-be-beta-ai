@@ -10,8 +10,9 @@ import {
 
 export function buildInvoiceHtml(
   invoice: Invoice,
-  user: { businessName?: string; email?: string; logoUri?: string; bankDetails?: { accountHolderName: string; sortCode: string; accountNumber: string; bankName?: string; reference?: string } } | null
+  user: { businessName?: string; email?: string; logoUri?: string; invoiceColor?: string; bankDetails?: { accountHolderName: string; sortCode: string; accountNumber: string; bankName?: string; reference?: string } } | null
 ): string {
+  const accentColor = user?.invoiceColor ?? '#3d5a4c';
   const currency = invoice.currency ?? "USD";
   const subtotal = calculateSubtotal(invoice.lineItems);
   const discount = calculateDiscountTotal(invoice.lineItems);
@@ -89,7 +90,7 @@ export function buildInvoiceHtml(
       </div>
     </div>
     <div style="text-align:right;">
-      <div style="font-size:28px;font-weight:800;color:#4a7c59;letter-spacing:-0.5px;">INVOICE</div>
+      <div style="font-size:28px;font-weight:800;color:${accentColor};letter-spacing:-0.5px;">INVOICE</div>
       ${invoice.invoiceNumber ? `<div style="font-size:14px;color:#374151;font-weight:600;margin-top:2px;">${invoice.invoiceNumber}</div>` : ""}
       <div style="font-size:13px;color:#6b7280;margin-top:4px;">Issued ${formatDate(invoice.createdAt)}</div>
       <div style="display:inline-block;margin-top:8px;padding:4px 12px;border-radius:9999px;font-size:12px;font-weight:600;background:${invoice.status === "fully_paid" ? "#dcfce7" : "#fef9c3"};color:${invoice.status === "fully_paid" ? "#166534" : "#854d0e"};">
@@ -162,7 +163,7 @@ export function buildInvoiceHtml(
 
 export async function downloadInvoicePdf(
   invoice: Invoice,
-  user: { businessName?: string; email?: string; logoUri?: string } | null
+  user: { businessName?: string; email?: string; logoUri?: string; invoiceColor?: string; bankDetails?: { accountHolderName: string; sortCode: string; accountNumber: string; bankName?: string; reference?: string } } | null
 ): Promise<void> {
   const html = buildInvoiceHtml(invoice, user);
   const filename = `invoice-${invoice.customerName.replace(/\s+/g, "-").toLowerCase()}-${invoice.id.slice(-6)}.pdf`;

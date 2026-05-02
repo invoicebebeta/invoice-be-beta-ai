@@ -38,6 +38,7 @@ export interface SendInvoiceParams {
   notes?: string;
   status: string;
   bankDetails?: BankDetails;
+  invoiceColor?: string;
 }
 
 export interface SendPaymentConfirmationParams {
@@ -117,7 +118,7 @@ function buildInvoiceEmail(p: SendInvoiceParams): string {
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
   <div style="max-width:560px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 8px rgba(0,0,0,0.06);">
-    <div style="background:#3d5a4c;padding:32px 40px;">
+    <div style="background:${p.invoiceColor ?? '#3d5a4c'};padding:32px 40px;">
       ${p.fromLogoData ? `<img src="${p.fromLogoData}" alt="${p.fromBusinessName}" style="width:60px;height:60px;border-radius:10px;object-fit:cover;margin-bottom:14px;display:block;">` : ''}
       <p style="margin:0;color:rgba(255,255,255,0.7);font-size:13px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;">Invoice</p>
       <h1 style="margin:4px 0 0;color:#ffffff;font-size:26px;font-weight:700;">${p.fromBusinessName}</h1>

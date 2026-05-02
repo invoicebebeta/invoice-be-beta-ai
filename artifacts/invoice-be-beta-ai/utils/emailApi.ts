@@ -46,6 +46,7 @@ export async function sendInvoiceEmail(
         notes: invoice.notes,
         status: invoice.status,
         bankDetails: user.bankDetails ?? null,
+        invoiceColor: user.invoiceColor ?? null,
       }),
     });
     return await res.json();

@@ -14,6 +14,7 @@ export type User = {
   logoUri?: string;
   bankDetails?: BankDetails;
   stripeConnectedAccountId?: string;
+  invoiceColor?: string;
 };
 
 export type LineItem = {

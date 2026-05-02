@@ -16,6 +16,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { CurrencyPicker } from "@/components/CurrencyPicker";
 import { LogoPicker } from "@/components/LogoPicker";
 import { BankDetailsForm } from "@/components/BankDetailsForm";
+import { InvoiceColorPicker } from "@/components/InvoiceColorPicker";
 import { useInvoices } from "@/contexts/InvoicesContext";
 import { exportInvoicesCsv } from "@/utils/exportCsv";
 import {
@@ -28,7 +29,7 @@ import { getReviewPageUrl } from "@/utils/reviewApi";
 export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, signOut, updateBusinessName, updateCurrency, updateLogo, updateBankDetails, updateStripeAccount } = useAuth();
+  const { user, signOut, updateBusinessName, updateCurrency, updateLogo, updateBankDetails, updateStripeAccount, updateInvoiceColor } = useAuth();
   const { reviews, averageRating, refreshReviews } = useReviews();
   const { invoices } = useInvoices();
   const [csvLoading, setCsvLoading] = useState(false);
@@ -189,12 +190,19 @@ export default function ProfileScreen() {
         </View>
 
         <Text style={[styles.section, { color: colors.mutedForeground }]}>Branding</Text>
-        <View style={{ marginBottom: 24 }}>
+        <View style={{ marginBottom: 16 }}>
           <LogoPicker
             logoUri={user?.logoUri}
             businessName={user?.businessName ?? ""}
             onChange={updateLogo}
           />
+        </View>
+        <Text style={[styles.subsection, { color: colors.mutedForeground }]}>Invoice colour</Text>
+        <View style={{ marginBottom: 24 }}>
+          <InvoiceColorPicker value={user?.invoiceColor} onChange={updateInvoiceColor} />
+          <Text style={[styles.helper, { color: colors.mutedForeground }]}>
+            Applied to the header of emails and PDFs sent to customers.
+          </Text>
         </View>
 
         <Text style={[styles.section, { color: colors.mutedForeground }]}>Stripe payments</Text>
@@ -324,6 +332,7 @@ const styles = StyleSheet.create({
   ratingNumber: { fontFamily: "Inter_700Bold", fontSize: 26, fontVariant: ["tabular-nums"] },
   ratingSub: { fontFamily: "Inter_400Regular", fontSize: 12 },
   section: { fontFamily: "Inter_600SemiBold", fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 },
+  subsection: { fontFamily: "Inter_500Medium", fontSize: 12, marginBottom: 8 },
   helper: { fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 8, lineHeight: 17 },
   stripeCard: { borderWidth: 1, marginBottom: 8, overflow: "hidden" },
   stripeTop: { flexDirection: "row", alignItems: "center", padding: 16 },
