@@ -181,6 +181,35 @@ export default function ProfileScreen() {
     else Alert.alert(title, message);
   };
 
+  const handleManageSubscription = async () => {
+    let url: string | null = customerInfo?.managementURL ?? null;
+
+    if (!url) {
+      if (Platform.OS === 'ios') {
+        url = 'itms-apps://apps.apple.com/account/subscriptions';
+      } else if (Platform.OS === 'android') {
+        url = 'https://play.google.com/store/account/subscriptions?package=com.invoicebebeta';
+      } else {
+        url = 'https://play.google.com/store/account/subscriptions';
+      }
+    }
+
+    try {
+      if (Platform.OS === 'web') {
+        window.open(url, '_blank');
+      } else {
+        const supported = await Linking.canOpenURL(url);
+        if (supported) {
+          await Linking.openURL(url);
+        } else {
+          showAlert('Cannot open link', 'Please manage your subscription through your device\'s subscription settings.');
+        }
+      }
+    } catch {
+      showAlert('Cannot open link', 'Please manage your subscription through your device\'s subscription settings.');
+    }
+  };
+
   const proEntitlement = customerInfo?.entitlements.active?.['pro'];
   const renewalDateStr = proEntitlement?.expirationDate
     ? new Date(proEntitlement.expirationDate).toLocaleDateString(undefined, {
@@ -233,22 +262,33 @@ export default function ProfileScreen() {
         <Text style={[styles.section, { color: colors.mutedForeground }]}>Plan</Text>
         <View style={[styles.planCard, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
           {isSubscribed ? (
-            <View style={styles.planRow}>
-              <View style={[styles.planIconWrap, { backgroundColor: colors.primary + "18" }]}>
-                <Feather name="zap" size={18} color={colors.primary} />
-              </View>
-              <View style={{ flex: 1, marginLeft: 12 }}>
-                <View style={styles.planTitleRow}>
-                  <Text style={[styles.planTitle, { color: colors.foreground }]}>Pro</Text>
-                  <View style={[styles.proBadge, { backgroundColor: colors.primary }]}>
-                    <Text style={[styles.proBadgeText, { color: colors.primaryForeground }]}>Active</Text>
-                  </View>
+            <>
+              <View style={styles.planRow}>
+                <View style={[styles.planIconWrap, { backgroundColor: colors.primary + "18" }]}>
+                  <Feather name="zap" size={18} color={colors.primary} />
                 </View>
-                <Text style={[styles.planSub, { color: colors.mutedForeground }]}>
-                  {renewalDateStr ? `Renews ${renewalDateStr}` : "Unlimited invoices & all features"}
-                </Text>
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <View style={styles.planTitleRow}>
+                    <Text style={[styles.planTitle, { color: colors.foreground }]}>Pro</Text>
+                    <View style={[styles.proBadge, { backgroundColor: colors.primary }]}>
+                      <Text style={[styles.proBadgeText, { color: colors.primaryForeground }]}>Active</Text>
+                    </View>
+                  </View>
+                  <Text style={[styles.planSub, { color: colors.mutedForeground }]}>
+                    {renewalDateStr ? `Renews ${renewalDateStr}` : "Unlimited invoices & all features"}
+                  </Text>
+                </View>
               </View>
-            </View>
+              <View style={[styles.planDivider, { borderTopColor: colors.border }]}>
+                <Pressable
+                  onPress={handleManageSubscription}
+                  style={({ pressed }) => [styles.manageSubBtn, { opacity: pressed ? 0.6 : 1 }]}
+                >
+                  <Feather name="external-link" size={14} color={colors.primary} style={{ marginRight: 6 }} />
+                  <Text style={[styles.manageSubBtnText, { color: colors.primary }]}>Manage subscription</Text>
+                </Pressable>
+              </View>
+            </>
           ) : (
             <>
               <View style={styles.planRow}>
@@ -539,6 +579,8 @@ const styles = StyleSheet.create({
   planDivider: { borderTopWidth: StyleSheet.hairlineWidth, padding: 12 },
   upgradeBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 11 },
   upgradeBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
+  manageSubBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 11 },
+  manageSubBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
   detailCard: { borderWidth: 1, marginBottom: 8, overflow: "hidden" },
   detailRow: { flexDirection: "row", alignItems: "flex-start", padding: 14 },
   detailDivider: { borderTopWidth: StyleSheet.hairlineWidth },
