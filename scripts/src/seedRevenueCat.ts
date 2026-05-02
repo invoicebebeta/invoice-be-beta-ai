@@ -101,13 +101,22 @@ async function seedRevenueCat() {
     path: { project_id: project.id },
     query: { limit: 20 },
   });
-  if (listAppsError || !apps || apps.items.length === 0) throw new Error('No apps found');
+  if (listAppsError) throw new Error('Failed to list apps: ' + JSON.stringify(listAppsError));
 
-  let testStoreApp: App | undefined = apps.items.find((a) => a.type === 'test_store');
-  let appStoreApp: App | undefined = apps.items.find((a) => a.type === 'app_store');
-  let playStoreApp: App | undefined = apps.items.find((a) => a.type === 'play_store');
+  const appItems = apps?.items ?? [];
 
-  if (!testStoreApp) throw new Error('No test store app found');
+  let testStoreApp: App | undefined = appItems.find((a) => a.type === 'test_store');
+  let appStoreApp: App | undefined = appItems.find((a) => a.type === 'app_store');
+  let playStoreApp: App | undefined = appItems.find((a) => a.type === 'play_store');
+
+  if (!testStoreApp) {
+    console.warn('No test store app found — RevenueCat should auto-create one per project. Re-querying after a short wait...');
+    await new Promise((r) => setTimeout(r, 2000));
+    const { data: retryApps, error: retryErr } = await listApps({ client, path: { project_id: project.id }, query: { limit: 20 } });
+    if (retryErr) throw new Error('Failed to re-list apps');
+    testStoreApp = retryApps?.items?.find((a) => a.type === 'test_store');
+    if (!testStoreApp) throw new Error('No test store app found after retry — cannot proceed without RevenueCat test store');
+  }
   console.log('Test store app found:', testStoreApp.id);
 
   if (!appStoreApp) {
