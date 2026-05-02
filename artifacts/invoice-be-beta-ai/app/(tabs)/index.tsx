@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
-import { FlatList, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, FlatList, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useColors } from "@/hooks/useColors";
@@ -11,12 +11,14 @@ import { ScreenHeader } from "@/components/ScreenHeader";
 import { RevenueCard } from "@/components/RevenueCard";
 import { InvoiceRow } from "@/components/InvoiceRow";
 import { EmptyState } from "@/components/EmptyState";
-import { InvoiceStatus } from "@/utils/types";
+import { Invoice, InvoiceStatus } from "@/utils/types";
+import { sendReminderEmail } from "@/utils/emailApi";
 
-type FilterKey = "all" | "overdue" | InvoiceStatus;
+type FilterKey = "all" | "overdue" | "quotes" | InvoiceStatus;
 
 const FILTERS: { key: FilterKey; label: string }[] = [
   { key: "all", label: "All" },
+  { key: "quotes", label: "Quotes" },
   { key: "overdue", label: "Overdue" },
   { key: "draft", label: "Draft" },
   { key: "awaiting_deposit", label: "Awaiting deposit" },
@@ -24,27 +26,60 @@ const FILTERS: { key: FilterKey; label: string }[] = [
   { key: "fully_paid", label: "Paid" },
 ];
 
-const isOverdueInvoice = (inv: { status: InvoiceStatus; dueDate: string }) =>
-  inv.status !== "fully_paid" && new Date(inv.dueDate).getTime() < Date.now();
+const isOverdueInvoice = (inv: Invoice) =>
+  !inv.isQuote && inv.status !== "fully_paid" && new Date(inv.dueDate).getTime() < Date.now();
+
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
 export default function DashboardScreen() {
   const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { invoices, totalRevenue } = useInvoices();
+  const { invoices, totalRevenue, monthRevenue, outstanding, updateInvoice } = useInvoices();
   const { user } = useAuth();
 
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<FilterKey>("all");
+  const [reminderLoading, setReminderLoading] = useState(false);
+  const [reminderDismissed, setReminderDismissed] = useState(false);
 
   const topInset = Platform.OS === "web" ? 67 : insets.top;
   const tabBar = Platform.OS === "web" ? 84 : 84;
 
+  const overdueUnreminded = useMemo(() => {
+    return invoices.filter((inv) => {
+      if (!isOverdueInvoice(inv)) return false;
+      if (!inv.remindedAt) return true;
+      return Date.now() - new Date(inv.remindedAt).getTime() > SEVEN_DAYS_MS;
+    });
+  }, [invoices]);
+
+  const overdueCount = useMemo(() => invoices.filter(isOverdueInvoice).length, [invoices]);
+
+  const showReminderBanner = !reminderDismissed && overdueUnreminded.length > 0;
+
+  const handleSendReminders = async () => {
+    if (!user) return;
+    setReminderLoading(true);
+    for (const inv of overdueUnreminded) {
+      try {
+        await sendReminderEmail(inv, user, inv.finalLink ?? inv.depositLink);
+        await updateInvoice(inv.id, { remindedAt: new Date().toISOString() });
+      } catch {
+      }
+    }
+    setReminderLoading(false);
+    setReminderDismissed(true);
+  };
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return invoices.filter((inv) => {
-      if (filter === "overdue") {
+      if (filter === "quotes") {
+        if (!inv.isQuote) return false;
+      } else if (filter === "overdue") {
         if (!isOverdueInvoice(inv)) return false;
+      } else if (filter === "all") {
       } else if (filter !== "all" && inv.status !== filter) {
         return false;
       }
@@ -60,6 +95,7 @@ export default function DashboardScreen() {
   const counts = useMemo(() => {
     const map: Record<FilterKey, number> = {
       all: invoices.length,
+      quotes: 0,
       overdue: 0,
       draft: 0,
       awaiting_deposit: 0,
@@ -67,7 +103,11 @@ export default function DashboardScreen() {
       fully_paid: 0,
     };
     for (const inv of invoices) {
-      map[inv.status] += 1;
+      if (inv.isQuote) {
+        map.quotes += 1;
+      } else {
+        map[inv.status] += 1;
+      }
       if (isOverdueInvoice(inv)) map.overdue += 1;
     }
     return map;
@@ -87,7 +127,37 @@ export default function DashboardScreen() {
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: tabBar + 24 }}
         ListHeaderComponent={
           <View>
-            <RevenueCard total={totalRevenue} count={invoices.length} currency={user?.currency} />
+            <RevenueCard
+              total={totalRevenue}
+              monthRevenue={monthRevenue}
+              outstanding={outstanding}
+              overdueCount={overdueCount}
+              currency={user?.currency}
+            />
+
+            {showReminderBanner && (
+              <View style={[styles.reminderBanner, { borderRadius: colors.radius }]}>
+                <View style={styles.reminderLeft}>
+                  <Feather name="alert-circle" size={16} color="#92400e" />
+                  <Text style={styles.reminderText}>
+                    {overdueUnreminded.length} overdue {overdueUnreminded.length === 1 ? "invoice" : "invoices"} — send reminders?
+                  </Text>
+                </View>
+                <View style={styles.reminderActions}>
+                  {reminderLoading ? (
+                    <ActivityIndicator size="small" color="#92400e" />
+                  ) : (
+                    <Pressable onPress={handleSendReminders} style={styles.reminderSendBtn} hitSlop={6}>
+                      <Text style={styles.reminderSendText}>Send</Text>
+                    </Pressable>
+                  )}
+                  <Pressable onPress={() => setReminderDismissed(true)} hitSlop={8} style={{ padding: 4 }}>
+                    <Feather name="x" size={14} color="#92400e" />
+                  </Pressable>
+                </View>
+              </View>
+            )}
+
             {invoices.length > 0 && (
               <>
                 <View
@@ -254,4 +324,20 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 4,
   },
+  reminderBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#fef3c7",
+    borderWidth: 1,
+    borderColor: "#fcd34d",
+    padding: 12,
+    marginBottom: 12,
+    gap: 8,
+  },
+  reminderLeft: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1 },
+  reminderText: { fontFamily: "Inter_500Medium", fontSize: 13, color: "#92400e", flex: 1 },
+  reminderActions: { flexDirection: "row", alignItems: "center", gap: 10 },
+  reminderSendBtn: { paddingVertical: 4, paddingHorizontal: 10, backgroundColor: "#92400e", borderRadius: 6 },
+  reminderSendText: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: "#ffffff" },
 });

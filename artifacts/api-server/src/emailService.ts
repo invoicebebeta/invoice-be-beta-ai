@@ -39,6 +39,27 @@ export interface SendInvoiceParams {
   status: string;
   bankDetails?: BankDetails;
   invoiceColor?: string;
+  vatNumber?: string;
+  businessAddress?: string;
+  isQuote?: boolean;
+}
+
+export interface SendReminderParams {
+  toEmail: string;
+  toName: string;
+  fromBusinessName: string;
+  fromEmail: string;
+  fromLogoData?: string;
+  invoiceNumber?: string;
+  invoiceId: string;
+  total: number;
+  depositAmount?: number;
+  currency: string;
+  dueDate: string;
+  paymentLink?: string;
+  invoiceColor?: string;
+  vatNumber?: string;
+  businessAddress?: string;
 }
 
 export interface SendPaymentConfirmationParams {
@@ -68,8 +89,27 @@ function formatDate(iso: string): string {
   });
 }
 
+function buildBusinessFooter(p: { vatNumber?: string; businessAddress?: string; fromBusinessName: string; fromEmail: string }): string {
+  const lines: string[] = [];
+  if (p.businessAddress) lines.push(p.businessAddress.replace(/\n/g, ' · '));
+  if (p.vatNumber) lines.push(`VAT: ${p.vatNumber}`);
+  const main = `Sent by ${p.fromBusinessName} &middot; ${p.fromEmail}`;
+  const extras = lines.length > 0 ? `<br>${lines.join(' &middot; ')}` : '';
+  return `${main}${extras}`;
+}
+
+function buildBusinessFooterText(p: { vatNumber?: string; businessAddress?: string; fromBusinessName: string; fromEmail: string }): string {
+  const lines = [`Sent by ${p.fromBusinessName} — ${p.fromEmail}`];
+  if (p.businessAddress) lines.push(`Address: ${p.businessAddress}`);
+  if (p.vatNumber) lines.push(`VAT: ${p.vatNumber}`);
+  return lines.join('\n');
+}
+
 function buildInvoiceEmail(p: SendInvoiceParams): string {
   const ref = p.invoiceNumber ?? p.invoiceId;
+  const isQuote = p.isQuote ?? false;
+  const docLabel = isQuote ? 'Quote' : 'Invoice';
+
   const itemRows = p.lineItems
     .map(
       (item) => `
@@ -81,7 +121,7 @@ function buildInvoiceEmail(p: SendInvoiceParams): string {
     )
     .join('');
 
-  const paymentSection = p.paymentLink
+  const paymentSection = p.paymentLink && !isQuote
     ? `
     <div style="margin:32px 0;text-align:center;">
       <a href="${p.paymentLink}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:16px;font-weight:600;letter-spacing:0.01em;">
@@ -99,7 +139,7 @@ function buildInvoiceEmail(p: SendInvoiceParams): string {
     ? `<p style="margin:24px 0 0;padding:16px;background:#f9fafb;border-radius:8px;color:#6b7280;font-size:13px;line-height:1.6;"><strong>Notes:</strong> ${p.notes}</p>`
     : '';
 
-  const bankSection = p.bankDetails
+  const bankSection = p.bankDetails && !isQuote
     ? `
     <div style="margin:24px 0 0;padding:16px;background:#f9fafb;border-radius:8px;">
       <p style="margin:0 0 10px;color:#374151;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Bank transfer details</p>
@@ -113,6 +153,8 @@ function buildInvoiceEmail(p: SendInvoiceParams): string {
     </div>`
     : '';
 
+  const footer = buildBusinessFooter(p);
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -120,17 +162,17 @@ function buildInvoiceEmail(p: SendInvoiceParams): string {
   <div style="max-width:560px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 8px rgba(0,0,0,0.06);">
     <div style="background:${p.invoiceColor ?? '#3d5a4c'};padding:32px 40px;">
       ${p.fromLogoData ? `<img src="${p.fromLogoData}" alt="${p.fromBusinessName}" style="width:60px;height:60px;border-radius:10px;object-fit:cover;margin-bottom:14px;display:block;">` : ''}
-      <p style="margin:0;color:rgba(255,255,255,0.7);font-size:13px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;">Invoice</p>
+      <p style="margin:0;color:rgba(255,255,255,0.7);font-size:13px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;">${docLabel}</p>
       <h1 style="margin:4px 0 0;color:#ffffff;font-size:26px;font-weight:700;">${p.fromBusinessName}</h1>
     </div>
     <div style="padding:32px 40px;">
       <table style="width:100%;margin-bottom:8px;">
         <tr>
-          <td style="color:#6b7280;font-size:13px;">Invoice ref</td>
+          <td style="color:#6b7280;font-size:13px;">${docLabel} ref</td>
           <td style="color:#1f2937;font-size:13px;font-weight:600;text-align:right;">${ref}</td>
         </tr>
         <tr>
-          <td style="color:#6b7280;font-size:13px;padding-top:6px;">Due date</td>
+          <td style="color:#6b7280;font-size:13px;padding-top:6px;">${isQuote ? 'Valid until' : 'Due date'}</td>
           <td style="color:#1f2937;font-size:13px;font-weight:600;text-align:right;padding-top:6px;">${formatDate(p.dueDate)}</td>
         </tr>
       </table>
@@ -159,9 +201,72 @@ function buildInvoiceEmail(p: SendInvoiceParams): string {
       ${bankSection}
     </div>
     <div style="padding:20px 40px;background:#f9fafb;border-top:1px solid #eef0f3;">
-      <p style="margin:0;color:#9ca3af;font-size:12px;text-align:center;">
-        Sent by ${p.fromBusinessName} &middot; ${p.fromEmail}
+      <p style="margin:0;color:#9ca3af;font-size:12px;text-align:center;">${footer}</p>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+function buildReminderEmail(p: SendReminderParams): string {
+  const ref = p.invoiceNumber ?? p.invoiceId;
+  const footer = buildBusinessFooter(p);
+
+  const paymentSection = p.paymentLink
+    ? `
+    <div style="margin:32px 0;text-align:center;">
+      <a href="${p.paymentLink}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:16px;font-weight:600;">
+        Pay Now
+      </a>
+    </div>`
+    : '';
+
+  const depositNote = p.depositAmount && p.depositAmount > 0
+    ? `<p style="margin:8px 0;color:#6b7280;font-size:14px;text-align:center;">Amount due: <strong style="color:#1f2937;">${formatMoney(p.depositAmount, p.currency)}</strong></p>`
+    : '';
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <div style="max-width:560px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 8px rgba(0,0,0,0.06);">
+    <div style="background:${p.invoiceColor ?? '#3d5a4c'};padding:32px 40px;">
+      ${p.fromLogoData ? `<img src="${p.fromLogoData}" alt="${p.fromBusinessName}" style="width:60px;height:60px;border-radius:10px;object-fit:cover;margin-bottom:14px;display:block;">` : ''}
+      <p style="margin:0;color:rgba(255,255,255,0.7);font-size:13px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;">Payment reminder</p>
+      <h1 style="margin:4px 0 0;color:#ffffff;font-size:26px;font-weight:700;">${p.fromBusinessName}</h1>
+    </div>
+    <div style="padding:32px 40px;">
+      <p style="margin:0 0 20px;color:#374151;font-size:15px;line-height:1.7;">
+        Hi ${p.toName},<br><br>
+        This is a friendly reminder that invoice <strong>${ref}</strong> was due on <strong>${formatDate(p.dueDate)}</strong> and is now overdue.
       </p>
+
+      <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:16px;margin-bottom:24px;">
+        <table style="width:100%;">
+          <tr>
+            <td style="color:#92400e;font-size:13px;">Invoice ref</td>
+            <td style="color:#92400e;font-size:13px;font-weight:700;text-align:right;">${ref}</td>
+          </tr>
+          <tr>
+            <td style="color:#92400e;font-size:13px;padding-top:6px;">Due date</td>
+            <td style="color:#92400e;font-size:13px;font-weight:700;text-align:right;padding-top:6px;">${formatDate(p.dueDate)}</td>
+          </tr>
+          <tr>
+            <td style="color:#92400e;font-size:13px;padding-top:6px;">Total</td>
+            <td style="color:#92400e;font-size:15px;font-weight:700;text-align:right;padding-top:6px;">${formatMoney(p.total, p.currency)}</td>
+          </tr>
+        </table>
+      </div>
+
+      ${depositNote}
+      ${paymentSection}
+
+      <p style="margin:24px 0 0;color:#6b7280;font-size:13px;line-height:1.6;">
+        If you've already sent payment, please disregard this message. If you have any questions, please reply to this email.
+      </p>
+    </div>
+    <div style="padding:20px 40px;background:#f9fafb;border-top:1px solid #eef0f3;">
+      <p style="margin:0;color:#9ca3af;font-size:12px;text-align:center;">${footer}</p>
     </div>
   </div>
 </body>
@@ -199,9 +304,11 @@ function buildConfirmationEmail(p: SendPaymentConfirmationParams): string {
 
 function buildInvoiceText(p: SendInvoiceParams): string {
   const ref = p.invoiceNumber ?? p.invoiceId;
+  const isQuote = p.isQuote ?? false;
+  const docLabel = isQuote ? 'Quote' : 'Invoice';
   const lines: string[] = [
-    `Invoice ${ref} from ${p.fromBusinessName}`,
-    `Due: ${formatDate(p.dueDate)}`,
+    `${docLabel} ${ref} from ${p.fromBusinessName}`,
+    `${isQuote ? 'Valid until' : 'Due'}: ${formatDate(p.dueDate)}`,
     '',
     'Items:',
     ...p.lineItems.map(i => `  ${i.name} x${i.quantity} — ${formatMoney(i.price * i.quantity, p.currency)}`),
@@ -211,13 +318,13 @@ function buildInvoiceText(p: SendInvoiceParams): string {
   if (p.depositAmount && p.depositAmount > 0 && p.status === 'awaiting_deposit') {
     lines.push(`Deposit due: ${formatMoney(p.depositAmount, p.currency)}`);
   }
-  if (p.paymentLink) {
+  if (p.paymentLink && !isQuote) {
     lines.push('', `Pay online: ${p.paymentLink}`);
   }
   if (p.notes) {
     lines.push('', `Notes: ${p.notes}`);
   }
-  if (p.bankDetails) {
+  if (p.bankDetails && !isQuote) {
     lines.push('', 'Bank transfer details:');
     if (p.bankDetails.bankName) lines.push(`  Bank: ${p.bankDetails.bankName}`);
     lines.push(`  Account holder: ${p.bankDetails.accountHolderName}`);
@@ -225,14 +332,16 @@ function buildInvoiceText(p: SendInvoiceParams): string {
     lines.push(`  Account number: ${p.bankDetails.accountNumber}`);
     if (p.bankDetails.reference) lines.push(`  Reference: ${p.bankDetails.reference}`);
   }
-  lines.push('', `Sent by ${p.fromBusinessName} — ${p.fromEmail}`);
+  lines.push('', buildBusinessFooterText(p));
   return lines.join('\n');
 }
 
 export async function sendInvoiceEmail(p: SendInvoiceParams): Promise<void> {
   const resend = getResend();
   const ref = p.invoiceNumber ?? p.invoiceId;
-  const subject = `Invoice ${ref} from ${p.fromBusinessName}`;
+  const isQuote = p.isQuote ?? false;
+  const docLabel = isQuote ? 'Quote' : 'Invoice';
+  const subject = `${docLabel} ${ref} from ${p.fromBusinessName}`;
   const html = buildInvoiceEmail(p);
   const text = buildInvoiceText(p);
 
@@ -250,6 +359,29 @@ export async function sendInvoiceEmail(p: SendInvoiceParams): Promise<void> {
     throw new Error(error.message);
   }
   logger.info({ id: data?.id, to: p.toEmail, subject }, 'Invoice email sent');
+}
+
+export async function sendReminderEmail(p: SendReminderParams): Promise<void> {
+  const resend = getResend();
+  const ref = p.invoiceNumber ?? p.invoiceId;
+  const subject = `Reminder: Invoice ${ref} from ${p.fromBusinessName} is overdue`;
+  const html = buildReminderEmail(p);
+  const text = `Payment reminder\n\nHi ${p.toName},\n\nThis is a friendly reminder that invoice ${ref} was due on ${formatDate(p.dueDate)} and is now overdue.\n\nTotal: ${formatMoney(p.total, p.currency)}${p.paymentLink ? `\n\nPay online: ${p.paymentLink}` : ''}\n\nIf you have any questions, please reply to this email.\n\n${buildBusinessFooterText(p)}`;
+
+  const { data, error } = await resend.emails.send({
+    from: `${p.fromBusinessName} <invoices@invoicebebeta.com>`,
+    reply_to: p.fromEmail,
+    to: [p.toEmail],
+    subject,
+    html,
+    text,
+  });
+
+  if (error) {
+    logger.error({ error }, 'Resend reminder email failed');
+    throw new Error(error.message);
+  }
+  logger.info({ id: data?.id, to: p.toEmail, subject }, 'Reminder email sent');
 }
 
 export async function sendReviewRequestEmail(

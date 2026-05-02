@@ -14,6 +14,8 @@ type AuthContextType = {
   updateBankDetails: (details: BankDetails | null) => Promise<void>;
   updateStripeAccount: (accountId: string | null) => Promise<void>;
   updateInvoiceColor: (color: string) => Promise<void>;
+  updateVatNumber: (vat: string) => Promise<void>;
+  updateBusinessAddress: (address: string) => Promise<void>;
   loading: boolean;
 };
 
@@ -102,9 +104,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await persistUser({ ...user, invoiceColor: color });
   };
 
+  const updateVatNumber = async (vat: string) => {
+    if (!user) return;
+    await persistUser({ ...user, vatNumber: vat });
+  };
+
+  const updateBusinessAddress = async (address: string) => {
+    if (!user) return;
+    await persistUser({ ...user, businessAddress: address });
+  };
+
   return (
     <AuthContext.Provider
-      value={{ user, signIn, signUp, signOut, updateBusinessName, updateCurrency, updateLogo, updateBankDetails, updateStripeAccount, updateInvoiceColor, loading }}
+      value={{
+        user, signIn, signUp, signOut,
+        updateBusinessName, updateCurrency, updateLogo,
+        updateBankDetails, updateStripeAccount, updateInvoiceColor,
+        updateVatNumber, updateBusinessAddress,
+        loading,
+      }}
     >
       {children}
     </AuthContext.Provider>

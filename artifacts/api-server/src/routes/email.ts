@@ -1,6 +1,6 @@
 import { Router, type IRouter } from 'express';
 import { logger } from '../lib/logger';
-import { sendInvoiceEmail, sendPaymentConfirmationEmail, sendReviewRequestEmail } from '../emailService';
+import { sendInvoiceEmail, sendPaymentConfirmationEmail, sendReviewRequestEmail, sendReminderEmail } from '../emailService';
 import { findUserById } from '../connectDb';
 
 const router: IRouter = Router();
@@ -25,6 +25,9 @@ router.post('/email/send-invoice', async (req, res) => {
     status,
     bankDetails,
     invoiceColor,
+    vatNumber,
+    businessAddress,
+    isQuote,
   } = req.body;
 
   if (!toEmail || !fromBusinessName || !invoiceId || !lineItems || !total || !currency || !dueDate) {
@@ -60,11 +63,71 @@ router.post('/email/send-invoice', async (req, res) => {
       status: status ?? 'draft',
       bankDetails: bankDetails ?? undefined,
       invoiceColor: invoiceColor ?? undefined,
+      vatNumber: vatNumber ?? undefined,
+      businessAddress: businessAddress ?? undefined,
+      isQuote: isQuote ?? false,
     });
     res.json({ ok: true });
   } catch (err: any) {
     logger.error({ err: err.message }, 'Failed to send invoice email');
     res.status(500).json({ error: err.message ?? 'Failed to send email.' });
+  }
+});
+
+router.post('/email/send-reminder', async (req, res) => {
+  const {
+    toEmail,
+    toName,
+    fromBusinessName,
+    fromEmail,
+    fromUserId,
+    invoiceNumber,
+    invoiceId,
+    total,
+    depositAmount,
+    currency,
+    dueDate,
+    paymentLink,
+    invoiceColor,
+    vatNumber,
+    businessAddress,
+  } = req.body;
+
+  if (!toEmail || !fromBusinessName || !invoiceId || !total || !currency || !dueDate) {
+    return res.status(400).json({ error: 'Missing required fields.' });
+  }
+
+  try {
+    const senderHasLogo = fromUserId
+      ? !!(await findUserById(fromUserId))?.logo_data
+      : false;
+    const domains = process.env.REPLIT_DOMAINS ?? '';
+    const domain = domains.split(',')[0].trim();
+    const baseUrl = domain ? `https://${domain}` : 'http://localhost:8080';
+    const fromLogoUrl = senderHasLogo && fromUserId
+      ? `${baseUrl}/api/logo/${fromUserId}`
+      : undefined;
+    await sendReminderEmail({
+      toEmail,
+      toName: toName ?? toEmail,
+      fromBusinessName,
+      fromEmail: fromEmail ?? 'noreply@invoicebeta.app',
+      fromLogoData: fromLogoUrl,
+      invoiceNumber,
+      invoiceId,
+      total,
+      depositAmount,
+      currency,
+      dueDate,
+      paymentLink,
+      invoiceColor: invoiceColor ?? undefined,
+      vatNumber: vatNumber ?? undefined,
+      businessAddress: businessAddress ?? undefined,
+    });
+    res.json({ ok: true });
+  } catch (err: any) {
+    logger.error({ err: err.message }, 'Failed to send reminder email');
+    res.status(500).json({ error: err.message ?? 'Failed to send reminder.' });
   }
 });
 

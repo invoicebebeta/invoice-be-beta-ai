@@ -15,6 +15,8 @@ export type User = {
   bankDetails?: BankDetails;
   stripeConnectedAccountId?: string;
   invoiceColor?: string;
+  vatNumber?: string;
+  businessAddress?: string;
 };
 
 export type LineItem = {
@@ -48,6 +50,8 @@ export type Invoice = {
   finalLink?: string;
   notes?: string;
   createdAt: string;
+  isQuote?: boolean;
+  remindedAt?: string;
 };
 
 export type RecurringFrequency = 'weekly' | 'biweekly' | 'monthly' | 'quarterly';
@@ -78,4 +82,14 @@ export type Review = {
   text: string;
   createdAt: string;
   customerName?: string;
+};
+
+export type Customer = {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  address?: string;
+  notes?: string;
+  createdAt: string;
 };

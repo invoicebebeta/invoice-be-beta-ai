@@ -47,11 +47,48 @@ export async function sendInvoiceEmail(
         status: invoice.status,
         bankDetails: user.bankDetails ?? null,
         invoiceColor: user.invoiceColor ?? null,
+        vatNumber: user.vatNumber ?? null,
+        businessAddress: user.businessAddress ?? null,
+        isQuote: invoice.isQuote ?? false,
       }),
     });
     return await res.json();
   } catch {
     return { error: 'Could not send email. Please check your connection.' };
+  }
+}
+
+export async function sendReminderEmail(
+  invoice: Invoice,
+  user: User,
+  paymentLink?: string,
+): Promise<{ ok: boolean } | { error: string }> {
+  try {
+    const base = getApiBaseUrl();
+    const res = await fetch(`${base}/api/email/send-reminder`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        toEmail: invoice.customerEmail,
+        toName: invoice.customerName,
+        fromBusinessName: user.businessName,
+        fromEmail: user.email,
+        fromUserId: user.id,
+        invoiceNumber: invoice.invoiceNumber,
+        invoiceId: invoice.id,
+        total: invoice.total,
+        depositAmount: invoice.depositAmount,
+        currency: invoice.currency ?? user.currency ?? 'USD',
+        dueDate: invoice.dueDate,
+        paymentLink,
+        invoiceColor: user.invoiceColor ?? null,
+        vatNumber: user.vatNumber ?? null,
+        businessAddress: user.businessAddress ?? null,
+      }),
+    });
+    return await res.json();
+  } catch {
+    return { error: 'Could not send reminder. Please check your connection.' };
   }
 }
 

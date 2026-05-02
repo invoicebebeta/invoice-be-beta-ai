@@ -9,6 +9,7 @@ import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollV
 import { useColors } from "@/hooks/useColors";
 import { useInvoices } from "@/contexts/InvoicesContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCustomers } from "@/contexts/CustomersContext";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { CustomerSuggest, CustomerSuggestion } from "@/components/CustomerSuggest";
 import { LineItemEditor } from "@/components/LineItemEditor";
@@ -38,28 +39,38 @@ export default function CreateInvoiceScreen() {
   const insets = useSafeAreaInsets();
   const { addInvoice, updateInvoice, getInvoice, invoices } = useInvoices();
   const { user } = useAuth();
+  const { customers, upsertFromInvoice } = useCustomers();
   const params = useLocalSearchParams<{ editId?: string }>();
   const editId = typeof params.editId === "string" ? params.editId : undefined;
   const editing = !!editId;
   const editingInvoice = editing ? getInvoice(editId!) : undefined;
-  const editLocked = false; // editing allowed for all statuses
+  const editLocked = false;
   const editInProgress = editing && editingInvoice && editingInvoice.status !== "draft";
 
-  const customers = useMemo<CustomerSuggestion[]>(() => {
+  const customerSuggestions = useMemo<CustomerSuggestion[]>(() => {
     const byEmail = new Map<string, CustomerSuggestion>();
+    for (const c of customers) {
+      const key = c.email.toLowerCase();
+      byEmail.set(key, { name: c.name, email: c.email, lastUsed: c.createdAt });
+    }
     for (const inv of invoices) {
       const key = (inv.customerEmail || inv.customerName).toLowerCase();
       if (!key) continue;
-      const existing = byEmail.get(key);
-      if (!existing || new Date(inv.createdAt) > new Date(existing.lastUsed)) {
+      if (!byEmail.has(key)) {
         byEmail.set(key, { name: inv.customerName, email: inv.customerEmail, lastUsed: inv.createdAt });
+      } else {
+        const existing = byEmail.get(key)!;
+        if (new Date(inv.createdAt) > new Date(existing.lastUsed)) {
+          byEmail.set(key, { ...existing, lastUsed: inv.createdAt });
+        }
       }
     }
     return Array.from(byEmail.values()).sort(
       (a, b) => new Date(b.lastUsed).getTime() - new Date(a.lastUsed).getTime()
     );
-  }, [invoices]);
+  }, [customers, invoices]);
 
+  const [isQuote, setIsQuote] = useState(false);
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [items, setItems] = useState<LineItem[]>([blankItem()]);
@@ -73,6 +84,7 @@ export default function CreateInvoiceScreen() {
   const loadedForRef = useRef<string | null>(null);
 
   const resetForm = () => {
+    setIsQuote(false);
     setCustomerName("");
     setCustomerEmail("");
     setItems([blankItem()]);
@@ -91,6 +103,7 @@ export default function CreateInvoiceScreen() {
     }
     if (!editingInvoice) return;
     if (loadedForRef.current === editingInvoice.id) return;
+    setIsQuote(editingInvoice.isQuote ?? false);
     setCustomerName(editingInvoice.customerName);
     setCustomerEmail(editingInvoice.customerEmail);
     setItems(editingInvoice.lineItems.map((li) => ({ ...li })));
@@ -113,7 +126,7 @@ export default function CreateInvoiceScreen() {
   );
 
   const total = useMemo(() => calculateTotal(items), [items]);
-  const depositAmount = requireDeposit ? calculateDeposit(total, depositPercent) : 0;
+  const depositAmount = requireDeposit && !isQuote ? calculateDeposit(total, depositPercent) : 0;
   const remaining = calculateRemaining(total, depositAmount);
 
   const topInset = Platform.OS === "web" ? 67 : insets.top;
@@ -144,35 +157,38 @@ export default function CreateInvoiceScreen() {
 
     if (editing && editingInvoice) {
       const patch: Partial<Invoice> = {
+        isQuote,
         customerName: customerName.trim(),
         customerEmail: customerEmail.trim(),
         lineItems: items,
         dueDate,
-        requireDeposit,
-        depositPercent: requireDeposit ? depositPercent : 0,
+        requireDeposit: isQuote ? false : requireDeposit,
+        depositPercent: !isQuote && requireDeposit ? depositPercent : 0,
         total,
         depositAmount,
         remainingBalance: remaining,
         notes: notes.trim() || undefined,
-        depositLink: requireDeposit ? editingInvoice.depositLink : undefined,
+        depositLink: !isQuote && requireDeposit ? editingInvoice.depositLink : undefined,
       };
       await updateInvoice(editingInvoice.id, patch);
+      await upsertFromInvoice(customerName.trim(), customerEmail.trim());
       setSaving(false);
       router.replace(`/invoice/${editingInvoice.id}`);
       return;
     }
 
     const id = newId("inv");
-    const status: InvoiceStatus = requireDeposit ? "awaiting_deposit" : "draft";
+    const status: InvoiceStatus = !isQuote && requireDeposit ? "awaiting_deposit" : "draft";
     const invoice: Invoice = {
       id,
       userId: user?.id ?? "anonymous",
+      isQuote,
       customerName: customerName.trim(),
       customerEmail: customerEmail.trim(),
       lineItems: items,
       dueDate,
-      requireDeposit,
-      depositPercent: requireDeposit ? depositPercent : 0,
+      requireDeposit: isQuote ? false : requireDeposit,
+      depositPercent: !isQuote && requireDeposit ? depositPercent : 0,
       total,
       depositAmount,
       remainingBalance: remaining,
@@ -184,6 +200,7 @@ export default function CreateInvoiceScreen() {
       createdAt: new Date().toISOString(),
     };
     await addInvoice(invoice);
+    await upsertFromInvoice(customerName.trim(), customerEmail.trim());
     setSaving(false);
     resetForm();
     router.push(`/invoice/${id}`);
@@ -193,7 +210,7 @@ export default function CreateInvoiceScreen() {
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={{ paddingTop: topInset }}>
         <ScreenHeader
-          title={editing ? "Edit invoice" : "New invoice"}
+          title={editing ? (isQuote ? "Edit quote" : "Edit invoice") : "New"}
           subtitle={editing ? "Update the details below" : "Fill in the details below"}
           right={
             editing ? (
@@ -211,6 +228,35 @@ export default function CreateInvoiceScreen() {
         bottomOffset={20}
         keyboardShouldPersistTaps="handled"
       >
+        {!editing && (
+          <View style={[styles.typeToggle, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
+            <Pressable
+              onPress={() => setIsQuote(false)}
+              style={[
+                styles.typeBtn,
+                { borderRadius: colors.radius - 2, backgroundColor: !isQuote ? colors.primary : "transparent" },
+              ]}
+            >
+              <Feather name="file-text" size={14} color={!isQuote ? colors.primaryForeground : colors.mutedForeground} />
+              <Text style={[styles.typeBtnText, { color: !isQuote ? colors.primaryForeground : colors.mutedForeground }]}>
+                Invoice
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setIsQuote(true)}
+              style={[
+                styles.typeBtn,
+                { borderRadius: colors.radius - 2, backgroundColor: isQuote ? colors.primary : "transparent" },
+              ]}
+            >
+              <Feather name="clipboard" size={14} color={isQuote ? colors.primaryForeground : colors.mutedForeground} />
+              <Text style={[styles.typeBtnText, { color: isQuote ? colors.primaryForeground : colors.mutedForeground }]}>
+                Quote
+              </Text>
+            </Pressable>
+          </View>
+        )}
+
         {editInProgress && (
           <View style={[styles.warnBanner, { backgroundColor: "#fef3c7", borderColor: "#fcd34d", borderRadius: colors.radius }]}>
             <Feather name="alert-circle" size={15} color="#92400e" style={{ marginTop: 1 }} />
@@ -219,9 +265,10 @@ export default function CreateInvoiceScreen() {
             </Text>
           </View>
         )}
+
         <Text style={[styles.section, { color: colors.mutedForeground }]}>Customer</Text>
         <CustomerSuggest
-          customers={customers}
+          customers={customerSuggestions}
           name={customerName}
           email={customerEmail}
           onChangeName={setCustomerName}
@@ -244,7 +291,9 @@ export default function CreateInvoiceScreen() {
           <Text style={[styles.addText, { color: colors.foreground }]}>Add line item</Text>
         </Pressable>
 
-        <Text style={[styles.section, { color: colors.mutedForeground, marginTop: 16 }]}>Due date</Text>
+        <Text style={[styles.section, { color: colors.mutedForeground, marginTop: 16 }]}>
+          {isQuote ? "Valid for" : "Due date"}
+        </Text>
         <View style={styles.chipsRow}>
           {DUE_PRESETS.map((p) => {
             const active = dueDays === p.days;
@@ -273,17 +322,21 @@ export default function CreateInvoiceScreen() {
           )}
         </View>
 
-        <Text style={[styles.section, { color: colors.mutedForeground, marginTop: 16 }]}>Deposit</Text>
-        <DepositToggle
-          enabled={requireDeposit}
-          onToggle={setRequireDeposit}
-          percent={depositPercent}
-          onPercentChange={setDepositPercent}
-          total={total}
-          depositAmount={depositAmount}
-          remaining={remaining}
-          currency={editing ? editingInvoice?.currency : user?.currency}
-        />
+        {!isQuote && (
+          <>
+            <Text style={[styles.section, { color: colors.mutedForeground, marginTop: 16 }]}>Deposit</Text>
+            <DepositToggle
+              enabled={requireDeposit}
+              onToggle={setRequireDeposit}
+              percent={depositPercent}
+              onPercentChange={setDepositPercent}
+              total={total}
+              depositAmount={depositAmount}
+              remaining={remaining}
+              currency={editing ? editingInvoice?.currency : user?.currency}
+            />
+          </>
+        )}
 
         <Text style={[styles.section, { color: colors.mutedForeground, marginTop: 16 }]}>Notes & terms</Text>
         <TextInput
@@ -304,7 +357,7 @@ export default function CreateInvoiceScreen() {
           ]}
         />
         <Text style={[styles.notesHint, { color: colors.mutedForeground }]}>
-          {notes.length}/500 · Shown to your customer on the invoice
+          {notes.length}/500 · Shown to your customer on the {isQuote ? "quote" : "invoice"}
         </Text>
 
         <View style={[styles.totalRow, { borderTopColor: colors.border }]}>
@@ -314,13 +367,34 @@ export default function CreateInvoiceScreen() {
           </Text>
         </View>
 
-        <PrimaryButton title={editing ? "Save changes" : "Save invoice"} onPress={onSave} loading={saving} icon="check" />
+        <PrimaryButton
+          title={editing ? "Save changes" : isQuote ? "Save quote" : "Save invoice"}
+          onPress={onSave}
+          loading={saving}
+          icon="check"
+        />
       </KeyboardAwareScrollViewCompat>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  typeToggle: {
+    flexDirection: "row",
+    padding: 4,
+    borderWidth: 1,
+    marginBottom: 20,
+    gap: 4,
+  },
+  typeBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    gap: 6,
+  },
+  typeBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
   section: { fontFamily: "Inter_600SemiBold", fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 },
   addBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 12, borderWidth: 1, borderStyle: "dashed", marginBottom: 8 },
   addText: { fontFamily: "Inter_500Medium", fontSize: 14, marginLeft: 6 },

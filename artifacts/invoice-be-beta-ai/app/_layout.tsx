@@ -19,7 +19,9 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { InvoicesProvider } from "@/contexts/InvoicesContext";
 import { ReviewsProvider } from "@/contexts/ReviewsContext";
 import { RecurringProvider } from "@/contexts/RecurringContext";
+import { CustomersProvider } from "@/contexts/CustomersContext";
 import { useColors } from "@/hooks/useColors";
+import { storage } from "@/utils/storage";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -34,10 +36,22 @@ function AuthGate() {
   useEffect(() => {
     if (loading) return;
     const inAuthGroup = segments[0] === "(auth)";
+    const inOnboarding = segments[0] === "(onboarding)";
+
     if (!user && !inAuthGroup) {
       router.replace("/(auth)/login");
     } else if (user && inAuthGroup) {
-      router.replace("/(tabs)");
+      (async () => {
+        const seen = await storage.get<boolean>(`onboarding_seen_${user.id}`);
+        if (!seen) {
+          router.replace("/(onboarding)");
+        } else {
+          router.replace("/(tabs)");
+        }
+      })();
+    } else if (user && inOnboarding) {
+    } else if (!user && inOnboarding) {
+      router.replace("/(auth)/login");
     }
   }, [user, loading, segments, router]);
 
@@ -53,8 +67,10 @@ function AuthGate() {
     <Stack screenOptions={{ headerBackTitle: "Back", headerStyle: { backgroundColor: colors.background }, headerTintColor: colors.foreground, headerTitleStyle: { fontFamily: "Inter_600SemiBold" } }}>
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="(onboarding)" options={{ headerShown: false, presentation: "fullScreenModal" }} />
       <Stack.Screen name="invoice/[id]" options={{ title: "Invoice" }} />
       <Stack.Screen name="customer/[email]" options={{ title: "Customer" }} />
+      <Stack.Screen name="customers/index" options={{ title: "Customers" }} />
       <Stack.Screen name="recurring/[id]" options={{ title: "Recurring template" }} />
       <Stack.Screen name="review/[id]" options={{ title: "Leave a review", presentation: "modal" }} />
     </Stack>
@@ -87,7 +103,9 @@ export default function RootLayout() {
                 <InvoicesProvider>
                   <RecurringProvider>
                     <ReviewsProvider>
-                      <AuthGate />
+                      <CustomersProvider>
+                        <AuthGate />
+                      </CustomersProvider>
                     </ReviewsProvider>
                   </RecurringProvider>
                 </InvoicesProvider>

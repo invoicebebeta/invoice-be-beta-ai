@@ -1,13 +1,14 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Alert, Linking, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from "react-native";
+import { Alert, Linking, Platform, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/contexts/AuthContext";
 import { useReviews } from "@/contexts/ReviewsContext";
+import { useCustomers } from "@/contexts/CustomersContext";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { TextField } from "@/components/TextField";
 import { SecondaryButton } from "@/components/SecondaryButton";
@@ -29,12 +30,25 @@ import { getReviewPageUrl } from "@/utils/reviewApi";
 export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, signOut, updateBusinessName, updateCurrency, updateLogo, updateBankDetails, updateStripeAccount, updateInvoiceColor } = useAuth();
+  const router = useRouter();
+  const {
+    user, signOut,
+    updateBusinessName, updateCurrency, updateLogo,
+    updateBankDetails, updateStripeAccount, updateInvoiceColor,
+    updateVatNumber, updateBusinessAddress,
+  } = useAuth();
   const { reviews, averageRating, refreshReviews } = useReviews();
   const { invoices } = useInvoices();
+  const { customers } = useCustomers();
   const [csvLoading, setCsvLoading] = useState(false);
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(user?.businessName ?? "");
+
+  const [vatNumber, setVatNumber] = useState(user?.vatNumber ?? "");
+  const [vatEditing, setVatEditing] = useState(false);
+
+  const [businessAddress, setBusinessAddress] = useState(user?.businessAddress ?? "");
+  const [addressEditing, setAddressEditing] = useState(false);
 
   const [stripeConnected, setStripeConnected] = useState(false);
   const [stripeAccountId, setStripeAccountId] = useState<string | null>(null);
@@ -43,10 +57,25 @@ export default function ProfileScreen() {
   const topInset = Platform.OS === "web" ? 67 : insets.top;
   const tabBar = 84;
 
+  useEffect(() => {
+    setVatNumber(user?.vatNumber ?? "");
+    setBusinessAddress(user?.businessAddress ?? "");
+  }, [user?.vatNumber, user?.businessAddress]);
+
   const onSave = async () => {
     if (!name.trim()) return;
     await updateBusinessName(name.trim());
     setEditing(false);
+  };
+
+  const onSaveVat = async () => {
+    await updateVatNumber(vatNumber.trim());
+    setVatEditing(false);
+  };
+
+  const onSaveAddress = async () => {
+    await updateBusinessAddress(businessAddress.trim());
+    setAddressEditing(false);
   };
 
   const refreshStripeStatus = useCallback(async () => {
@@ -100,7 +129,7 @@ export default function ProfileScreen() {
       if (msg.includes('client_id not configured')) {
         showAlert(
           'Stripe Connect not configured',
-          'To enable Stripe Connect, add your STRIPE_CONNECT_CLIENT_ID to the environment. You can get this from the Stripe Dashboard under Connect > Settings.'
+          'To enable Stripe Connect, add your STRIPE_CONNECT_CLIENT_ID to the environment.'
         );
       } else {
         showAlert('Could not connect', msg);
@@ -205,6 +234,73 @@ export default function ProfileScreen() {
           </Text>
         </View>
 
+        <Text style={[styles.section, { color: colors.mutedForeground }]}>Business details</Text>
+        <View style={[styles.detailCard, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
+          <View style={styles.detailRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.detailLabel, { color: colors.mutedForeground }]}>VAT number</Text>
+              {vatEditing ? (
+                <TextInput
+                  value={vatNumber}
+                  onChangeText={setVatNumber}
+                  placeholder="e.g. GB123456789"
+                  placeholderTextColor={colors.mutedForeground}
+                  autoCapitalize="characters"
+                  autoFocus
+                  style={[styles.detailInput, { color: colors.foreground }]}
+                  onSubmitEditing={onSaveVat}
+                  returnKeyType="done"
+                />
+              ) : (
+                <Text style={[styles.detailValue, { color: vatNumber ? colors.foreground : colors.mutedForeground }]}>
+                  {vatNumber || "Not set"}
+                </Text>
+              )}
+            </View>
+            <Pressable
+              onPress={() => vatEditing ? onSaveVat() : setVatEditing(true)}
+              hitSlop={10}
+              style={{ padding: 6, marginLeft: 8 }}
+            >
+              <Feather name={vatEditing ? "check" : "edit-2"} size={16} color={colors.primary} />
+            </Pressable>
+          </View>
+
+          <View style={[styles.detailDivider, { borderTopColor: colors.border }]} />
+
+          <View style={styles.detailRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.detailLabel, { color: colors.mutedForeground }]}>Business address</Text>
+              {addressEditing ? (
+                <TextInput
+                  value={businessAddress}
+                  onChangeText={setBusinessAddress}
+                  placeholder="Your registered business address"
+                  placeholderTextColor={colors.mutedForeground}
+                  multiline
+                  numberOfLines={3}
+                  autoFocus
+                  style={[styles.detailInput, { color: colors.foreground, minHeight: 60 }]}
+                />
+              ) : (
+                <Text style={[styles.detailValue, { color: businessAddress ? colors.foreground : colors.mutedForeground }]}>
+                  {businessAddress || "Not set"}
+                </Text>
+              )}
+            </View>
+            <Pressable
+              onPress={() => addressEditing ? onSaveAddress() : setAddressEditing(true)}
+              hitSlop={10}
+              style={{ padding: 6, marginLeft: 8, alignSelf: "flex-start" }}
+            >
+              <Feather name={addressEditing ? "check" : "edit-2"} size={16} color={colors.primary} />
+            </Pressable>
+          </View>
+        </View>
+        <Text style={[styles.helper, { color: colors.mutedForeground, marginBottom: 24 }]}>
+          Shown in the footer of all invoices and quotes sent to customers.
+        </Text>
+
         <Text style={[styles.section, { color: colors.mutedForeground }]}>Stripe payments</Text>
         <View style={[styles.stripeCard, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
           <View style={styles.stripeTop}>
@@ -294,7 +390,24 @@ export default function ProfileScreen() {
           ))
         )}
 
-        <Text style={[styles.section, { color: colors.mutedForeground, marginTop: 8 }]}>Data</Text>
+        <Text style={[styles.section, { color: colors.mutedForeground, marginTop: 8 }]}>Customers</Text>
+        <Pressable
+          onPress={() => router.push("/customers/index")}
+          style={({ pressed }) => [
+            styles.navRow,
+            { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius, opacity: pressed ? 0.8 : 1 },
+          ]}
+        >
+          <View style={[styles.navIcon, { backgroundColor: colors.muted }]}>
+            <Feather name="users" size={16} color={colors.mutedForeground} />
+          </View>
+          <Text style={[styles.navLabel, { color: colors.foreground }]}>
+            Address book · {customers.length} {customers.length === 1 ? "customer" : "customers"}
+          </Text>
+          <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
+        </Pressable>
+
+        <Text style={[styles.section, { color: colors.mutedForeground, marginTop: 24 }]}>Data</Text>
         <View style={{ marginBottom: 24, gap: 10 }}>
           <SecondaryButton
             title={csvLoading ? "Exporting…" : `Export invoices (${invoices.length})`}
@@ -350,6 +463,12 @@ const styles = StyleSheet.create({
   section: { fontFamily: "Inter_600SemiBold", fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 },
   subsection: { fontFamily: "Inter_500Medium", fontSize: 12, marginBottom: 8 },
   helper: { fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 8, lineHeight: 17 },
+  detailCard: { borderWidth: 1, marginBottom: 8, overflow: "hidden" },
+  detailRow: { flexDirection: "row", alignItems: "flex-start", padding: 14 },
+  detailDivider: { borderTopWidth: StyleSheet.hairlineWidth },
+  detailLabel: { fontFamily: "Inter_500Medium", fontSize: 11, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 4 },
+  detailValue: { fontFamily: "Inter_500Medium", fontSize: 14 },
+  detailInput: { fontFamily: "Inter_500Medium", fontSize: 14, padding: 0, margin: 0 },
   stripeCard: { borderWidth: 1, marginBottom: 8, overflow: "hidden" },
   stripeTop: { flexDirection: "row", alignItems: "center", padding: 16 },
   stripeIconWrap: { width: 44, height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center" },
@@ -367,4 +486,7 @@ const styles = StyleSheet.create({
   reviewCustomer: { fontFamily: "Inter_600SemiBold", fontSize: 13 },
   reviewDate: { fontFamily: "Inter_500Medium", fontSize: 12 },
   reviewText: { fontFamily: "Inter_400Regular", fontSize: 14, lineHeight: 20 },
+  navRow: { flexDirection: "row", alignItems: "center", padding: 14, borderWidth: 1, marginBottom: 8, gap: 12 },
+  navIcon: { width: 34, height: 34, borderRadius: 8, alignItems: "center", justifyContent: "center" },
+  navLabel: { flex: 1, fontFamily: "Inter_500Medium", fontSize: 14 },
 });

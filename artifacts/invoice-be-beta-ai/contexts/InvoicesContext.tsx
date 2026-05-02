@@ -10,8 +10,11 @@ type InvoicesContextType = {
   updateInvoice: (id: string, patch: Partial<Invoice>) => Promise<void>;
   deleteInvoice: (id: string) => Promise<void>;
   duplicateInvoice: (id: string) => Promise<Invoice | null>;
+  convertQuoteToInvoice: (id: string) => Promise<Invoice | null>;
   getInvoice: (id: string) => Invoice | undefined;
   totalRevenue: number;
+  monthRevenue: number;
+  outstanding: number;
 };
 
 const InvoicesContext = createContext<InvoicesContextType | null>(null);
@@ -29,17 +32,20 @@ export function InvoicesProvider({ children }: { children: React.ReactNode }) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [counter, setCounter] = useState(0);
+  const [quoteCounter, setQuoteCounter] = useState(0);
 
   useEffect(() => {
     if (!userId) {
       setInvoices([]);
       setCounter(0);
+      setQuoteCounter(0);
       setLoading(false);
       return;
     }
 
     const KEY = `invoices_${userId}`;
     const COUNTER_KEY = `invoices_counter_${userId}`;
+    const QUOTE_COUNTER_KEY = `quotes_counter_${userId}`;
 
     setLoading(true);
     (async () => {
@@ -51,13 +57,26 @@ export function InvoicesProvider({ children }: { children: React.ReactNode }) {
         setCounter(stored);
       } else {
         const maxFromExisting = list.reduce((max, inv) => {
-          if (!inv.invoiceNumber) return max;
+          if (!inv.invoiceNumber || inv.isQuote) return max;
           const n = parseInt(inv.invoiceNumber.replace(/\D/g, ''), 10);
           return isNaN(n) ? max : Math.max(max, n);
         }, 0);
-        const derived = Math.max(maxFromExisting, list.length);
+        const derived = Math.max(maxFromExisting, list.filter((i) => !i.isQuote).length);
         setCounter(derived);
         await storage.set(COUNTER_KEY, derived);
+      }
+
+      const storedQ = await storage.get<number>(QUOTE_COUNTER_KEY);
+      if (storedQ != null) {
+        setQuoteCounter(storedQ);
+      } else {
+        const maxFromExisting = list.reduce((max, inv) => {
+          if (!inv.invoiceNumber || !inv.isQuote) return max;
+          const n = parseInt(inv.invoiceNumber.replace(/\D/g, ''), 10);
+          return isNaN(n) ? max : Math.max(max, n);
+        }, 0);
+        setQuoteCounter(maxFromExisting);
+        await storage.set(QUOTE_COUNTER_KEY, maxFromExisting);
       }
 
       setLoading(false);
@@ -70,16 +89,28 @@ export function InvoicesProvider({ children }: { children: React.ReactNode }) {
     await storage.set(`invoices_${userId}`, list);
   };
 
-  const nextInvoiceNumber = async (currentCounter: number): Promise<[string, number]> => {
-    const next = currentCounter + 1;
+  const nextInvoiceNumber = async (current: number): Promise<[string, number]> => {
+    const next = current + 1;
     if (userId) await storage.set(`invoices_counter_${userId}`, next);
     setCounter(next);
     return [`INV-${padNum(next)}`, next];
   };
 
+  const nextQuoteNumber = async (current: number): Promise<[string, number]> => {
+    const next = current + 1;
+    if (userId) await storage.set(`quotes_counter_${userId}`, next);
+    setQuoteCounter(next);
+    return [`QUO-${padNum(next)}`, next];
+  };
+
   const addInvoice = async (invoice: Invoice) => {
-    const [invoiceNumber] = await nextInvoiceNumber(counter);
-    await persist([{ ...invoice, invoiceNumber }, ...invoices]);
+    let number: string;
+    if (invoice.isQuote) {
+      [number] = await nextQuoteNumber(quoteCounter);
+    } else {
+      [number] = await nextInvoiceNumber(counter);
+    }
+    await persist([{ ...invoice, invoiceNumber: number }, ...invoices]);
   };
 
   const updateInvoice = async (id: string, patch: Partial<Invoice>) => {
@@ -97,35 +128,82 @@ export function InvoicesProvider({ children }: { children: React.ReactNode }) {
     const clonedItems: LineItem[] = source.lineItems.map((li) => ({ ...li, id: newId('li') }));
     const newInvoiceId = newId('inv');
     const dueDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
-    const [invoiceNumber] = await nextInvoiceNumber(counter);
+    let number: string;
+    if (source.isQuote) {
+      [number] = await nextQuoteNumber(quoteCounter);
+    } else {
+      [number] = await nextInvoiceNumber(counter);
+    }
     const copy: Invoice = {
       ...source,
       id: newInvoiceId,
-      invoiceNumber,
+      invoiceNumber: number,
       lineItems: clonedItems,
       dueDate,
       status: 'draft',
       depositLink: undefined,
       finalLink: undefined,
+      remindedAt: undefined,
       createdAt: new Date().toISOString(),
     };
     await persist([copy, ...invoices]);
     return copy;
   };
 
+  const convertQuoteToInvoice = async (id: string) => {
+    const source = invoices.find((i) => i.id === id);
+    if (!source || !source.isQuote) return null;
+    const [number] = await nextInvoiceNumber(counter);
+    const updated: Invoice = {
+      ...source,
+      isQuote: false,
+      invoiceNumber: number,
+      status: 'draft',
+    };
+    await persist(invoices.map((inv) => (inv.id === id ? updated : inv)));
+    return updated;
+  };
+
   const getInvoice = (id: string) => invoices.find((i) => i.id === id);
 
   const totalRevenue = useMemo(() => {
     return invoices.reduce((sum, inv) => {
+      if (inv.isQuote) return sum;
       if (inv.status === 'fully_paid') return sum + inv.total;
       if (inv.status === 'deposit_paid') return sum + inv.depositAmount;
       return sum;
     }, 0);
   }, [invoices]);
 
+  const monthRevenue = useMemo(() => {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    return invoices.reduce((sum, inv) => {
+      if (inv.isQuote) return sum;
+      const paidAt = new Date(inv.createdAt).getTime();
+      if (paidAt < startOfMonth) return sum;
+      if (inv.status === 'fully_paid') return sum + inv.total;
+      if (inv.status === 'deposit_paid') return sum + inv.depositAmount;
+      return sum;
+    }, 0);
+  }, [invoices]);
+
+  const outstanding = useMemo(() => {
+    return invoices.reduce((sum, inv) => {
+      if (inv.isQuote) return sum;
+      if (inv.status === 'fully_paid') return sum;
+      if (inv.status === 'deposit_paid') return sum + inv.remainingBalance;
+      return sum + inv.total;
+    }, 0);
+  }, [invoices]);
+
   return (
     <InvoicesContext.Provider
-      value={{ invoices, loading, addInvoice, updateInvoice, deleteInvoice, duplicateInvoice, getInvoice, totalRevenue }}
+      value={{
+        invoices, loading, addInvoice, updateInvoice, deleteInvoice,
+        duplicateInvoice, convertQuoteToInvoice, getInvoice,
+        totalRevenue, monthRevenue, outstanding,
+      }}
     >
       {children}
     </InvoicesContext.Provider>
