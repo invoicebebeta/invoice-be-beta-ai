@@ -12,7 +12,7 @@ export function InvoiceRow({ invoice, onPress }: Props) {
   const colors = useColors();
   const due = new Date(invoice.dueDate);
   const dueLabel = due.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-  const isOverdue = invoice.status !== 'fully_paid' && due.getTime() < Date.now();
+  const isOverdue = !invoice.isQuote && invoice.status !== 'fully_paid' && due.getTime() < Date.now();
 
   return (
     <Pressable
@@ -21,7 +21,7 @@ export function InvoiceRow({ invoice, onPress }: Props) {
         styles.row,
         {
           backgroundColor: colors.card,
-          borderColor: colors.border,
+          borderColor: invoice.isQuote ? colors.primary + '44' : colors.border,
           borderRadius: colors.radius,
           opacity: pressed ? 0.7 : 1,
         },
@@ -40,11 +40,22 @@ export function InvoiceRow({ invoice, onPress }: Props) {
           <Text style={[styles.amount, { color: colors.foreground }]}>{formatMoney(invoice.total, invoice.currency)}</Text>
         </View>
         <View style={styles.bottomRow}>
-          <StatusBadge status={invoice.status} />
+          {invoice.isQuote ? (
+            <View style={[styles.quoteBadge, { backgroundColor: colors.primary + '1a', borderColor: colors.primary + '44' }]}>
+              <Feather name="clipboard" size={10} color={colors.primary} />
+              <Text style={[styles.quoteBadgeText, { color: colors.primary }]}>Quote</Text>
+            </View>
+          ) : (
+            <StatusBadge status={invoice.status} />
+          )}
           <View style={styles.dueWrap}>
-            <Feather name={isOverdue ? 'alert-circle' : 'calendar'} size={12} color={isOverdue ? colors.destructive : colors.mutedForeground} />
+            <Feather
+              name={isOverdue ? 'alert-circle' : 'calendar'}
+              size={12}
+              color={isOverdue ? colors.destructive : colors.mutedForeground}
+            />
             <Text style={[styles.due, { color: isOverdue ? colors.destructive : colors.mutedForeground }]}>
-              {isOverdue ? `Overdue · ${dueLabel}` : `Due ${dueLabel}`}
+              {invoice.isQuote ? `Valid til ${dueLabel}` : isOverdue ? `Overdue · ${dueLabel}` : `Due ${dueLabel}`}
             </Text>
           </View>
         </View>
@@ -62,4 +73,6 @@ const styles = StyleSheet.create({
   amount: { fontFamily: 'Inter_700Bold', fontSize: 16, fontVariant: ['tabular-nums'] },
   dueWrap: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   due: { fontFamily: 'Inter_500Medium', fontSize: 12, marginLeft: 4 },
+  quoteBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999, borderWidth: 1 },
+  quoteBadgeText: { fontFamily: 'Inter_600SemiBold', fontSize: 11 },
 });

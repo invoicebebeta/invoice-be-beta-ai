@@ -39,7 +39,7 @@ export default function InvoiceDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const colors = useColors();
-  const { getInvoice, updateInvoice, duplicateInvoice, deleteInvoice } = useInvoices();
+  const { getInvoice, updateInvoice, duplicateInvoice, deleteInvoice, convertQuoteToInvoice } = useInvoices();
   const { user } = useAuth();
   const invoice = getInvoice(String(id));
   const [pendingAction, setPendingAction] = useState<string | null>(null);
@@ -47,6 +47,7 @@ export default function InvoiceDetailScreen() {
   const [stripeLinkLoading, setStripeLinkLoading] = useState(false);
   const [emailLoading, setEmailLoading] = useState(false);
   const [reviewEmailLoading, setReviewEmailLoading] = useState(false);
+  const [convertLoading, setConvertLoading] = useState(false);
 
   if (!invoice) {
     return (
@@ -69,6 +70,16 @@ export default function InvoiceDetailScreen() {
       window.alert(`${title}\n\n${message}`);
     } else {
       Alert.alert(title, message);
+    }
+  };
+
+  const handleConvertToInvoice = async () => {
+    setConvertLoading(true);
+    const converted = await convertQuoteToInvoice(invoice.id);
+    setConvertLoading(false);
+    if (converted) {
+      haptic();
+      showAlert("Quote converted", `${invoice.invoiceNumber} has been converted to invoice ${converted.invoiceNumber}. You can now send it to your customer.`);
     }
   };
 
@@ -287,14 +298,23 @@ export default function InvoiceDetailScreen() {
     if ('error' in result) {
       showAlert('Email failed', (result as any).error);
     } else {
-      showAlert('Invoice sent', `Invoice emailed to ${invoice.customerEmail}.`);
+      showAlert(invoice.isQuote ? 'Quote sent' : 'Invoice sent', `${invoice.isQuote ? 'Quote' : 'Invoice'} emailed to ${invoice.customerEmail}.`);
     }
   };
 
-  const showAwaitingBanner = invoice.status === "awaiting_deposit" || invoice.status === "draft" || invoice.status === "deposit_paid";
+  const docLabel = invoice.isQuote ? "Quote" : "Invoice";
+  const showAwaitingBanner = !invoice.isQuote && (invoice.status === "awaiting_deposit" || invoice.status === "draft" || invoice.status === "deposit_paid");
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: 20, paddingBottom: 60 }}>
+      {invoice.isQuote && (
+        <View style={[styles.banner, { backgroundColor: colors.primary + '1a', borderRadius: colors.radius }]}>
+          <Feather name="clipboard" size={18} color={colors.primary} />
+          <Text style={[styles.bannerText, { color: colors.primary }]}>
+            This is a quote — convert it to an invoice when approved
+          </Text>
+        </View>
+      )}
       {showAwaitingBanner && (
         <View style={[styles.banner, {
           backgroundColor: invoice.status === "deposit_paid" ? "#dbeafe" : invoice.status === "awaiting_deposit" ? "#fef3c7" : colors.muted,
@@ -329,8 +349,8 @@ export default function InvoiceDetailScreen() {
             </Text>
           </View>
           {invoice.invoiceNumber ? (
-            <View style={[styles.invNumBadge, { backgroundColor: colors.muted, borderColor: colors.border }]}>
-              <Text style={[styles.invNumText, { color: colors.mutedForeground }]}>{invoice.invoiceNumber}</Text>
+            <View style={[styles.invNumBadge, { backgroundColor: invoice.isQuote ? colors.primary + '1a' : colors.muted, borderColor: invoice.isQuote ? colors.primary + '44' : colors.border }]}>
+              <Text style={[styles.invNumText, { color: invoice.isQuote ? colors.primary : colors.mutedForeground }]}>{invoice.invoiceNumber}</Text>
             </View>
           ) : null}
         </View>
@@ -342,10 +362,18 @@ export default function InvoiceDetailScreen() {
             <Text style={[styles.customerName, { color: colors.foreground }]}>{invoice.customerName}</Text>
             <Text style={[styles.customerEmail, { color: colors.mutedForeground }]}>{invoice.customerEmail}</Text>
           </Pressable>
-          <StatusBadge status={invoice.status} />
+          {invoice.isQuote ? (
+            <View style={[styles.quoteBadge, { backgroundColor: colors.primary + '1a', borderColor: colors.primary + '44' }]}>
+              <Feather name="clipboard" size={11} color={colors.primary} />
+              <Text style={[styles.quoteBadgeText, { color: colors.primary }]}>Quote</Text>
+            </View>
+          ) : (
+            <StatusBadge status={invoice.status} />
+          )}
         </View>
         <Text style={[styles.due, { color: colors.mutedForeground }]}>
-          Due {new Date(invoice.dueDate).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })}
+          {invoice.isQuote ? "Valid until" : "Due"}{" "}
+          {new Date(invoice.dueDate).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })}
         </Text>
       </View>
 
@@ -381,7 +409,7 @@ export default function InvoiceDetailScreen() {
             if (tax > 0) rows.push({ label: "Tax", value: tax });
           }
           rows.push({ label: "Total", value: invoice.total, emphasis: !invoice.requireDeposit });
-          if (invoice.requireDeposit) {
+          if (!invoice.isQuote && invoice.requireDeposit) {
             rows.push({ label: "Deposit", value: invoice.depositAmount });
             rows.push({ label: "Remaining", value: invoice.remainingBalance, emphasis: true });
           }
@@ -398,7 +426,7 @@ export default function InvoiceDetailScreen() {
         </>
       ) : null}
 
-      {user?.bankDetails && (
+      {!invoice.isQuote && user?.bankDetails && (
         <>
           <Text style={[styles.section, { color: colors.mutedForeground, marginTop: 20 }]}>Bank transfer details</Text>
           <View style={[styles.bankCard, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
@@ -415,7 +443,7 @@ export default function InvoiceDetailScreen() {
         </>
       )}
 
-      {(invoice.depositLink || invoice.finalLink) && (
+      {!invoice.isQuote && (invoice.depositLink || invoice.finalLink) && (
         <>
           <Text style={[styles.section, { color: colors.mutedForeground, marginTop: 20 }]}>Shareable links</Text>
           {invoice.depositLink && <LinkRow label="Deposit link" value={invoice.depositLink} onCopy={copyLink} />}
@@ -424,82 +452,120 @@ export default function InvoiceDetailScreen() {
       )}
 
       <View style={{ marginTop: 24, gap: 10 }}>
-        {invoice.status === "draft" && invoice.requireDeposit && (
-          <PrimaryButton title="Request deposit" onPress={requestDeposit} loading={pendingAction === "request_deposit"} icon="send" />
-        )}
-        {invoice.status === "awaiting_deposit" && (
-          <>
-            <PrimaryButton title="Mark deposit as paid" onPress={markDepositPaid} loading={pendingAction === "mark_deposit"} icon="check" />
-          </>
-        )}
-        {invoice.status === "deposit_paid" && (
-          <>
-            <PrimaryButton title="Request final payment" onPress={requestFinal} loading={pendingAction === "request_final"} icon="send" />
-            <SecondaryButton title="Mark as fully paid" onPress={markFullyPaid} icon="check-circle" />
-          </>
-        )}
-        {invoice.status === "draft" && !invoice.requireDeposit && (
-          <>
-            <PrimaryButton title="Request payment" onPress={requestFinal} icon="send" />
-            <SecondaryButton title="Mark as fully paid" onPress={markFullyPaid} icon="check-circle" />
-          </>
-        )}
-        {invoice.status === "fully_paid" && (
+        {invoice.isQuote && (
           <>
             <PrimaryButton
-              title={reviewEmailLoading ? "Sending request…" : `Email review request to ${invoice.customerName}`}
-              onPress={handleEmailReviewRequest}
-              icon="send"
-              variant="success"
-              loading={reviewEmailLoading}
+              title={convertLoading ? "Converting…" : "Convert to invoice"}
+              onPress={handleConvertToInvoice}
+              loading={convertLoading}
+              icon="file-text"
             />
             <SecondaryButton
-              title="Share review link"
-              onPress={handleShareReviewLink}
-              icon="share-2"
+              title={emailLoading ? "Sending quote…" : `Email quote to ${invoice.customerEmail}`}
+              icon="mail"
+              onPress={handleEmailInvoice}
+            />
+            <SecondaryButton title="Edit quote" onPress={() => router.push(`/(tabs)/create?editId=${invoice.id}`)} icon="edit-2" />
+            <SecondaryButton title="Duplicate quote" onPress={onDuplicate} icon="copy" />
+            <SecondaryButton
+              title={pdfLoading ? "Generating PDF…" : "Download PDF"}
+              icon="download"
+              onPress={async () => {
+                setPdfLoading(true);
+                try {
+                  await downloadInvoicePdf(invoice, user ?? null);
+                } finally {
+                  setPdfLoading(false);
+                }
+              }}
+            />
+            <SecondaryButton
+              title="Delete quote"
+              onPress={onDelete}
+              icon="trash-2"
+              variant="destructive"
             />
           </>
         )}
-        <SecondaryButton title="Edit invoice" onPress={() => router.push(`/(tabs)/create?editId=${invoice.id}`)} icon="edit-2" />
-        <SecondaryButton title="Duplicate invoice" onPress={onDuplicate} icon="copy" />
-        <SecondaryButton
-          title={emailLoading ? "Sending email…" : `Email invoice to ${invoice.customerEmail}`}
-          icon="mail"
-          onPress={handleEmailInvoice}
-        />
-        {user?.stripeConnectedAccountId && invoice.status !== "fully_paid" && (
-          <SecondaryButton
-            title={
-              stripeLinkLoading
-                ? "Generating link…"
-                : invoice.status === "awaiting_deposit"
-                  ? (invoice.depositLink ? "Regenerate deposit payment link" : "Get deposit payment link")
-                  : invoice.status === "deposit_paid"
-                    ? (invoice.finalLink ? "Regenerate final payment link" : "Get final payment link")
-                    : "Get Stripe payment link"
-            }
-            icon="credit-card"
-            onPress={getStripePaymentLink}
-          />
+
+        {!invoice.isQuote && (
+          <>
+            {invoice.status === "draft" && invoice.requireDeposit && (
+              <PrimaryButton title="Request deposit" onPress={requestDeposit} loading={pendingAction === "request_deposit"} icon="send" />
+            )}
+            {invoice.status === "awaiting_deposit" && (
+              <PrimaryButton title="Mark deposit as paid" onPress={markDepositPaid} loading={pendingAction === "mark_deposit"} icon="check" />
+            )}
+            {invoice.status === "deposit_paid" && (
+              <>
+                <PrimaryButton title="Request final payment" onPress={requestFinal} loading={pendingAction === "request_final"} icon="send" />
+                <SecondaryButton title="Mark as fully paid" onPress={markFullyPaid} icon="check-circle" />
+              </>
+            )}
+            {invoice.status === "draft" && !invoice.requireDeposit && (
+              <>
+                <PrimaryButton title="Request payment" onPress={requestFinal} icon="send" />
+                <SecondaryButton title="Mark as fully paid" onPress={markFullyPaid} icon="check-circle" />
+              </>
+            )}
+            {invoice.status === "fully_paid" && (
+              <>
+                <PrimaryButton
+                  title={reviewEmailLoading ? "Sending request…" : `Email review request to ${invoice.customerName}`}
+                  onPress={handleEmailReviewRequest}
+                  icon="send"
+                  variant="success"
+                  loading={reviewEmailLoading}
+                />
+                <SecondaryButton
+                  title="Share review link"
+                  onPress={handleShareReviewLink}
+                  icon="share-2"
+                />
+              </>
+            )}
+            <SecondaryButton title="Edit invoice" onPress={() => router.push(`/(tabs)/create?editId=${invoice.id}`)} icon="edit-2" />
+            <SecondaryButton title="Duplicate invoice" onPress={onDuplicate} icon="copy" />
+            <SecondaryButton
+              title={emailLoading ? "Sending email…" : `Email invoice to ${invoice.customerEmail}`}
+              icon="mail"
+              onPress={handleEmailInvoice}
+            />
+            {user?.stripeConnectedAccountId && invoice.status !== "fully_paid" && (
+              <SecondaryButton
+                title={
+                  stripeLinkLoading
+                    ? "Generating link…"
+                    : invoice.status === "awaiting_deposit"
+                      ? (invoice.depositLink ? "Regenerate deposit payment link" : "Get deposit payment link")
+                      : invoice.status === "deposit_paid"
+                        ? (invoice.finalLink ? "Regenerate final payment link" : "Get final payment link")
+                        : "Get Stripe payment link"
+                }
+                icon="credit-card"
+                onPress={getStripePaymentLink}
+              />
+            )}
+            <SecondaryButton
+              title={pdfLoading ? "Generating PDF…" : "Download PDF"}
+              icon="download"
+              onPress={async () => {
+                setPdfLoading(true);
+                try {
+                  await downloadInvoicePdf(invoice, user ?? null);
+                } finally {
+                  setPdfLoading(false);
+                }
+              }}
+            />
+            <SecondaryButton
+              title={invoice.status === "draft" ? "Delete draft" : "Delete invoice"}
+              onPress={onDelete}
+              icon="trash-2"
+              variant="destructive"
+            />
+          </>
         )}
-        <SecondaryButton
-          title={pdfLoading ? "Generating PDF…" : "Download PDF"}
-          icon="download"
-          onPress={async () => {
-            setPdfLoading(true);
-            try {
-              await downloadInvoicePdf(invoice, user ?? null);
-            } finally {
-              setPdfLoading(false);
-            }
-          }}
-        />
-        <SecondaryButton
-          title={invoice.status === "draft" ? "Delete draft" : "Delete invoice"}
-          onPress={onDelete}
-          icon="trash-2"
-          variant="destructive"
-        />
       </View>
     </ScrollView>
   );
@@ -538,7 +604,7 @@ function LinkRow({ label, value, onCopy }: { label: string; value: string; onCop
 
 const styles = StyleSheet.create({
   banner: { flexDirection: "row", alignItems: "center", padding: 14, marginBottom: 16, gap: 10 },
-  bannerText: { fontFamily: "Inter_600SemiBold", fontSize: 14, marginLeft: 8 },
+  bannerText: { fontFamily: "Inter_600SemiBold", fontSize: 14, marginLeft: 8, flex: 1 },
   headerCard: { padding: 18, borderWidth: 1, marginBottom: 18 },
   brandRow: { flexDirection: "row", alignItems: "center", paddingBottom: 14, borderBottomWidth: StyleSheet.hairlineWidth },
   logo: { width: 44, height: 44, borderRadius: 10 },
@@ -567,4 +633,6 @@ const styles = StyleSheet.create({
   linkRow: { flexDirection: "row", alignItems: "center", padding: 14, borderWidth: 1, marginBottom: 8 },
   linkLabel: { fontFamily: "Inter_500Medium", fontSize: 11, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 4 },
   linkValue: { fontFamily: "Inter_500Medium", fontSize: 13 },
+  quoteBadge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, borderWidth: 1 },
+  quoteBadgeText: { fontFamily: "Inter_600SemiBold", fontSize: 11 },
 });

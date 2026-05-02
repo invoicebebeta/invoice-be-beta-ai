@@ -50,6 +50,39 @@ export async function ensureResetTokensTable(): Promise<void> {
   }
 }
 
+export async function ensurePushTokensTable(): Promise<void> {
+  const client = await getPool().connect();
+  try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS push_tokens (
+        id SERIAL PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        token TEXT NOT NULL UNIQUE,
+        created_at TIMESTAMP DEFAULT NOW(),
+        CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES app_users(id) ON DELETE CASCADE
+      )
+    `);
+  } finally {
+    client.release();
+  }
+}
+
+export async function upsertPushToken(userId: string, token: string): Promise<void> {
+  await getPool().query(
+    `INSERT INTO push_tokens (user_id, token) VALUES ($1, $2)
+     ON CONFLICT (token) DO UPDATE SET user_id = EXCLUDED.user_id`,
+    [userId, token]
+  );
+}
+
+export async function getPushTokensByUserId(userId: string): Promise<string[]> {
+  const r = await getPool().query(
+    'SELECT token FROM push_tokens WHERE user_id = $1',
+    [userId]
+  );
+  return r.rows.map((row: { token: string }) => row.token);
+}
+
 export type AppUser = { id: string; email: string; password_hash: string; business_name: string; logo_data: string | null };
 
 export async function findUserByEmail(email: string): Promise<AppUser | null> {

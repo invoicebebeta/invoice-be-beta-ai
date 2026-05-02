@@ -1,6 +1,6 @@
 import { runMigrations } from 'stripe-replit-sync';
 import { getStripeSync } from "./stripeClient";
-import { ensureConnectedAccountsTable, ensureUsersTable, ensureResetTokensTable, ensureReviewsTable } from "./connectDb";
+import { ensureConnectedAccountsTable, ensureUsersTable, ensureResetTokensTable, ensureReviewsTable, ensurePushTokensTable } from "./connectDb";
 import app from "./app";
 import { logger } from "./lib/logger";
 
@@ -34,6 +34,8 @@ async function initStripe() {
   logger.info('Reviews table ready');
   await ensureConnectedAccountsTable();
   logger.info('Connected accounts table ready');
+  await ensurePushTokensTable();
+  logger.info('Push tokens table ready');
 
   const stripeSync = await getStripeSync();
 
