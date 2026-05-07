@@ -20,7 +20,8 @@
     "production": {
       "autoIncrement": true,
       "env": {
-        "PNPM_FLAGS": "--no-frozen-lockfile"
+        "PNPM_FLAGS": "--no-frozen-lockfile",
+        "EXPO_PUBLIC_API_BASE_URL": "https://e35fa01f-1271-4d9a-9f40-b21100c96e3e-00-200stmlpfp5x0.janeway.replit.dev"
       },
       "ios": {
         "simulator": false,
