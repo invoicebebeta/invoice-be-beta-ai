@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import * as Clipboard from "expo-clipboard";
 
@@ -314,6 +314,21 @@ export default function InvoiceDetailScreen() {
   const showAwaitingBanner = !invoice.isQuote && (invoice.status === "awaiting_deposit" || invoice.status === "draft" || invoice.status === "deposit_paid");
 
   return (
+    <>
+      <Stack.Screen
+        options={{
+          title: invoice.isQuote ? "Quote" : "Invoice",
+          headerLeft: () => (
+            <Pressable
+              onPress={() => router.canGoBack() ? router.back() : router.replace("/(tabs)")}
+              hitSlop={10}
+              style={{ paddingRight: 8 }}
+            >
+              <Feather name="arrow-left" size={22} color={colors.foreground} />
+            </Pressable>
+          ),
+        }}
+      />
     <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: 20, paddingBottom: 60 }}>
       {invoice.isQuote && (
         <View style={[styles.banner, { backgroundColor: colors.primary + '1a', borderRadius: colors.radius }]}>
@@ -576,6 +591,7 @@ export default function InvoiceDetailScreen() {
         )}
       </View>
     </ScrollView>
+    </>
   );
 }
 
