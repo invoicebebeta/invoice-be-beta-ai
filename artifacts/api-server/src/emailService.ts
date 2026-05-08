@@ -130,10 +130,44 @@ function buildInvoiceEmail(p: SendInvoiceParams): string {
     </div>`
     : '';
 
-  const depositNote =
-    p.depositAmount && p.depositAmount > 0 && p.status === 'awaiting_deposit'
-      ? `<p style="margin:16px 0;color:#6b7280;font-size:14px;text-align:center;">Deposit due: <strong style="color:#1f2937;">${formatMoney(p.depositAmount, p.currency)}</strong></p>`
-      : '';
+  const isDepositRequest = p.status === 'awaiting_deposit' && p.depositAmount && p.depositAmount > 0;
+  const isFinalPayment = p.remainingBalance && p.remainingBalance > 0 && p.depositAmount && p.depositAmount > 0 && p.status !== 'awaiting_deposit';
+
+  let amountSection: string;
+  if (isFinalPayment) {
+    amountSection = `
+      <div style="margin-top:16px;">
+        <table style="width:100%;border-collapse:collapse;">
+          <tr>
+            <td style="color:#6b7280;font-size:13px;padding:3px 0;">Total</td>
+            <td style="text-align:right;color:#6b7280;font-size:13px;padding:3px 0;">${formatMoney(p.total, p.currency)}</td>
+          </tr>
+          <tr>
+            <td style="color:#6b7280;font-size:13px;padding:3px 0;">Deposit paid</td>
+            <td style="text-align:right;color:#059669;font-size:13px;padding:3px 0;">-${formatMoney(p.depositAmount!, p.currency)}</td>
+          </tr>
+        </table>
+        <div style="border-top:2px solid #1f2937;margin-top:8px;padding-top:10px;text-align:right;">
+          <p style="margin:0;color:#6b7280;font-size:13px;">Balance due</p>
+          <p style="margin:4px 0 0;color:#1f2937;font-size:24px;font-weight:700;">${formatMoney(p.remainingBalance!, p.currency)}</p>
+        </div>
+      </div>`;
+  } else if (isDepositRequest) {
+    amountSection = `
+      <div style="margin-top:16px;text-align:right;">
+        <p style="margin:0;color:#6b7280;font-size:13px;">Total</p>
+        <p style="margin:4px 0 0;color:#1f2937;font-size:24px;font-weight:700;">${formatMoney(p.total, p.currency)}</p>
+      </div>
+      <p style="margin:16px 0;color:#6b7280;font-size:14px;text-align:center;">Deposit due: <strong style="color:#1f2937;">${formatMoney(p.depositAmount!, p.currency)}</strong></p>`;
+  } else {
+    amountSection = `
+      <div style="margin-top:16px;text-align:right;">
+        <p style="margin:0;color:#6b7280;font-size:13px;">Total</p>
+        <p style="margin:4px 0 0;color:#1f2937;font-size:24px;font-weight:700;">${formatMoney(p.total, p.currency)}</p>
+      </div>`;
+  }
+
+  const depositNote = '';
 
   const notesSection = p.notes
     ? `<p style="margin:24px 0 0;padding:16px;background:#f9fafb;border-radius:8px;color:#6b7280;font-size:13px;line-height:1.6;"><strong>Notes:</strong> ${p.notes}</p>`
@@ -164,6 +198,7 @@ function buildInvoiceEmail(p: SendInvoiceParams): string {
       ${p.fromLogoData ? `<img src="${p.fromLogoData}" alt="${p.fromBusinessName}" style="width:60px;height:60px;border-radius:10px;object-fit:cover;margin-bottom:14px;display:block;">` : ''}
       <p style="margin:0;color:rgba(255,255,255,0.7);font-size:13px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;">${docLabel}</p>
       <h1 style="margin:4px 0 0;color:#ffffff;font-size:26px;font-weight:700;">${p.fromBusinessName}</h1>
+      ${p.businessAddress || p.vatNumber ? `<p style="margin:8px 0 0;color:rgba(255,255,255,0.75);font-size:12px;line-height:1.6;">${[p.businessAddress?.replace(/\n/g, ' · '), p.vatNumber ? `VAT: ${p.vatNumber}` : ''].filter(Boolean).join(' &middot; ')}</p>` : ''}
     </div>
     <div style="padding:32px 40px;">
       <table style="width:100%;margin-bottom:8px;">
@@ -190,12 +225,7 @@ function buildInvoiceEmail(p: SendInvoiceParams): string {
         <tbody>${itemRows}</tbody>
       </table>
 
-      <div style="margin-top:16px;text-align:right;">
-        <p style="margin:0;color:#6b7280;font-size:13px;">Total</p>
-        <p style="margin:4px 0 0;color:#1f2937;font-size:24px;font-weight:700;">${formatMoney(p.total, p.currency)}</p>
-      </div>
-
-      ${depositNote}
+      ${amountSection}
       ${paymentSection}
       ${notesSection}
       ${bankSection}
@@ -317,6 +347,9 @@ function buildInvoiceText(p: SendInvoiceParams): string {
   ];
   if (p.depositAmount && p.depositAmount > 0 && p.status === 'awaiting_deposit') {
     lines.push(`Deposit due: ${formatMoney(p.depositAmount, p.currency)}`);
+  } else if (p.remainingBalance && p.remainingBalance > 0 && p.depositAmount && p.depositAmount > 0 && p.status !== 'awaiting_deposit') {
+    lines.push(`Deposit paid: -${formatMoney(p.depositAmount, p.currency)}`);
+    lines.push(`Balance due: ${formatMoney(p.remainingBalance, p.currency)}`);
   }
   if (p.paymentLink && !isQuote) {
     lines.push('', `Pay online: ${p.paymentLink}`);

@@ -87,6 +87,8 @@ export function buildInvoiceHtml(
       <div>
         <div style="font-size:20px;font-weight:700;">${user?.businessName ?? "Your Business"}</div>
         <div style="font-size:13px;color:#6b7280;margin-top:2px;">${user?.email ?? ""}</div>
+        ${user?.businessAddress ? `<div style="font-size:12px;color:#6b7280;margin-top:2px;">${user.businessAddress.replace(/\n/g, ' · ')}</div>` : ""}
+        ${user?.vatNumber ? `<div style="font-size:12px;color:#6b7280;margin-top:2px;">VAT: ${user.vatNumber}</div>` : ""}
       </div>
     </div>
     <div style="text-align:right;">
