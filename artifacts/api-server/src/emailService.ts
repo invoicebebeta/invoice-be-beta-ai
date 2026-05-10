@@ -28,7 +28,7 @@ export interface SendInvoiceParams {
   fromLogoData?: string;
   invoiceNumber?: string;
   invoiceId: string;
-  lineItems: { name: string; quantity: number; price: number }[];
+  lineItems: { name: string; quantity: number; price: number; discountPercent?: number }[];
   total: number;
   depositAmount?: number;
   remainingBalance?: number;
@@ -110,15 +110,24 @@ function buildInvoiceEmail(p: SendInvoiceParams): string {
   const isQuote = p.isQuote ?? false;
   const docLabel = isQuote ? 'Quote' : 'Invoice';
 
+  const subtotal = p.lineItems.reduce((s, i) => s + i.price * i.quantity, 0);
+  const discountTotal = p.lineItems.reduce((s, i) => s + i.price * i.quantity * ((i.discountPercent ?? 0) / 100), 0);
+  const hasDiscount = discountTotal > 0;
+
   const itemRows = p.lineItems
-    .map(
-      (item) => `
+    .map((item) => {
+      const lineTotal = item.price * item.quantity;
+      const lineDiscount = lineTotal * ((item.discountPercent ?? 0) / 100);
+      const discountNote = (item.discountPercent ?? 0) > 0
+        ? `<br><span style="font-size:12px;color:#059669;">-${item.discountPercent}% discount (−${formatMoney(lineDiscount, p.currency)})</span>`
+        : '';
+      return `
       <tr>
-        <td style="padding:10px 0;border-bottom:1px solid #eef0f3;color:#374151;font-size:14px;">${item.name}</td>
+        <td style="padding:10px 0;border-bottom:1px solid #eef0f3;color:#374151;font-size:14px;">${item.name}${discountNote}</td>
         <td style="padding:10px 0;border-bottom:1px solid #eef0f3;color:#374151;font-size:14px;text-align:center;">${item.quantity}</td>
-        <td style="padding:10px 0;border-bottom:1px solid #eef0f3;color:#374151;font-size:14px;text-align:right;">${formatMoney(item.price * item.quantity, p.currency)}</td>
-      </tr>`,
-    )
+        <td style="padding:10px 0;border-bottom:1px solid #eef0f3;color:#374151;font-size:14px;text-align:right;">${formatMoney(lineTotal, p.currency)}</td>
+      </tr>`;
+    })
     .join('');
 
   const paymentSection = p.paymentLink && !isQuote
@@ -133,11 +142,22 @@ function buildInvoiceEmail(p: SendInvoiceParams): string {
   const isDepositRequest = p.status === 'awaiting_deposit' && p.depositAmount && p.depositAmount > 0;
   const isFinalPayment = p.remainingBalance && p.remainingBalance > 0 && p.depositAmount && p.depositAmount > 0 && p.status !== 'awaiting_deposit';
 
+  const discountRows = hasDiscount ? `
+          <tr>
+            <td style="color:#6b7280;font-size:13px;padding:3px 0;">Subtotal</td>
+            <td style="text-align:right;color:#6b7280;font-size:13px;padding:3px 0;">${formatMoney(subtotal, p.currency)}</td>
+          </tr>
+          <tr>
+            <td style="color:#059669;font-size:13px;padding:3px 0;">Discount</td>
+            <td style="text-align:right;color:#059669;font-size:13px;padding:3px 0;">-${formatMoney(discountTotal, p.currency)}</td>
+          </tr>` : '';
+
   let amountSection: string;
   if (isFinalPayment) {
     amountSection = `
       <div style="margin-top:16px;">
         <table style="width:100%;border-collapse:collapse;">
+          ${discountRows}
           <tr>
             <td style="color:#6b7280;font-size:13px;padding:3px 0;">Total</td>
             <td style="text-align:right;color:#6b7280;font-size:13px;padding:3px 0;">${formatMoney(p.total, p.currency)}</td>
@@ -154,16 +174,22 @@ function buildInvoiceEmail(p: SendInvoiceParams): string {
       </div>`;
   } else if (isDepositRequest) {
     amountSection = `
-      <div style="margin-top:16px;text-align:right;">
-        <p style="margin:0;color:#6b7280;font-size:13px;">Total</p>
-        <p style="margin:4px 0 0;color:#1f2937;font-size:24px;font-weight:700;">${formatMoney(p.total, p.currency)}</p>
+      <div style="margin-top:16px;">
+        ${hasDiscount ? `<table style="width:100%;border-collapse:collapse;">${discountRows}</table>` : ''}
+        <div style="text-align:right;">
+          <p style="margin:0;color:#6b7280;font-size:13px;">Total</p>
+          <p style="margin:4px 0 0;color:#1f2937;font-size:24px;font-weight:700;">${formatMoney(p.total, p.currency)}</p>
+        </div>
       </div>
       <p style="margin:16px 0;color:#6b7280;font-size:14px;text-align:center;">Deposit due: <strong style="color:#1f2937;">${formatMoney(p.depositAmount!, p.currency)}</strong></p>`;
   } else {
     amountSection = `
-      <div style="margin-top:16px;text-align:right;">
-        <p style="margin:0;color:#6b7280;font-size:13px;">Total</p>
-        <p style="margin:4px 0 0;color:#1f2937;font-size:24px;font-weight:700;">${formatMoney(p.total, p.currency)}</p>
+      <div style="margin-top:16px;">
+        ${hasDiscount ? `<table style="width:100%;border-collapse:collapse;">${discountRows}</table>` : ''}
+        <div style="text-align:right;">
+          <p style="margin:0;color:#6b7280;font-size:13px;">Total</p>
+          <p style="margin:4px 0 0;color:#1f2937;font-size:24px;font-weight:700;">${formatMoney(p.total, p.currency)}</p>
+        </div>
       </div>`;
   }
 

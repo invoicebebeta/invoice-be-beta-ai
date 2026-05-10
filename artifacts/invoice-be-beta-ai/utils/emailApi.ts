@@ -36,6 +36,7 @@ export async function sendInvoiceEmail(
           name: li.name,
           quantity: li.quantity,
           price: li.price,
+          discountPercent: li.discountPercent ?? 0,
         })),
         total: invoice.total,
         depositAmount: invoice.depositAmount,
