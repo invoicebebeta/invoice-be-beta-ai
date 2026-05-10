@@ -365,9 +365,12 @@ export default function ProfileScreen() {
             <Pressable
               onPress={() => vatEditing ? onSaveVat() : setVatEditing(true)}
               hitSlop={10}
-              style={{ padding: 6, marginLeft: 8 }}
+              style={vatEditing
+                ? { padding: 8, marginLeft: 8, backgroundColor: colors.primary, borderRadius: 8 }
+                : { padding: 6, marginLeft: 8 }
+              }
             >
-              <Feather name={vatEditing ? "check" : "edit-2"} size={16} color={colors.primary} />
+              <Feather name={vatEditing ? "check" : "edit-2"} size={16} color={vatEditing ? colors.primaryForeground : colors.primary} />
             </Pressable>
           </View>
 
@@ -396,9 +399,12 @@ export default function ProfileScreen() {
             <Pressable
               onPress={() => addressEditing ? onSaveAddress() : setAddressEditing(true)}
               hitSlop={10}
-              style={{ padding: 6, marginLeft: 8, alignSelf: "flex-start" }}
+              style={addressEditing
+                ? { padding: 8, marginLeft: 8, backgroundColor: colors.primary, borderRadius: 8, alignSelf: "flex-start" }
+                : { padding: 6, marginLeft: 8, alignSelf: "flex-start" }
+              }
             >
-              <Feather name={addressEditing ? "check" : "edit-2"} size={16} color={colors.primary} />
+              <Feather name={addressEditing ? "check" : "edit-2"} size={16} color={addressEditing ? colors.primaryForeground : colors.primary} />
             </Pressable>
           </View>
         </View>
