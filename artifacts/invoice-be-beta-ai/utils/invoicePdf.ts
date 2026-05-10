@@ -103,12 +103,12 @@ export function buildInvoiceHtml(
 
   <div style="display:flex;gap:32px;margin-bottom:36px;">
     <div style="flex:1;">
-      <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#9ca3af;margin-bottom:6px;">Bill to</div>
+      <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:${accentColor};margin-bottom:6px;">Bill to</div>
       <div style="font-size:16px;font-weight:700;">${invoice.customerName}</div>
       <div style="font-size:13px;color:#6b7280;margin-top:2px;">${invoice.customerEmail}</div>
     </div>
     <div style="flex:1;text-align:right;">
-      <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#9ca3af;margin-bottom:6px;">Due date</div>
+      <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:${accentColor};margin-bottom:6px;">Due date</div>
       <div style="font-size:15px;font-weight:600;">${formatDate(invoice.dueDate)}</div>
     </div>
   </div>
@@ -116,9 +116,9 @@ export function buildInvoiceHtml(
   <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
     <thead>
       <tr style="border-bottom:2px solid #111827;">
-        <th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:#9ca3af;padding-bottom:8px;">Description</th>
-        <th style="text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:#9ca3af;padding-bottom:8px;white-space:nowrap;">Unit × Qty</th>
-        <th style="text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:#9ca3af;padding-bottom:8px;">Amount</th>
+        <th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:${accentColor};padding-bottom:8px;">Description</th>
+        <th style="text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:${accentColor};padding-bottom:8px;white-space:nowrap;">Unit × Qty</th>
+        <th style="text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:${accentColor};padding-bottom:8px;">Amount</th>
       </tr>
     </thead>
     <tbody>${lineItemRows}</tbody>
@@ -133,7 +133,7 @@ export function buildInvoiceHtml(
   ${
     invoice.notes
       ? `<div style="border:1px solid #e5e7eb;border-radius:8px;padding:16px;background:#f9fafb;margin-bottom:24px;">
-      <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#9ca3af;margin-bottom:8px;">Notes & terms</div>
+      <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:${accentColor};margin-bottom:8px;">Notes & terms</div>
       <div style="font-size:13px;color:#374151;line-height:1.6;">${invoice.notes}</div>
     </div>`
       : ""
@@ -143,7 +143,7 @@ export function buildInvoiceHtml(
     user?.bankDetails
       ? `<div style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:24px;">
       <div style="background:#f9fafb;padding:10px 16px;border-bottom:1px solid #e5e7eb;">
-        <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#9ca3af;">Bank transfer details</span>
+        <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:${accentColor};">Bank transfer details</span>
       </div>
       <table style="width:100%;border-collapse:collapse;">
         ${user.bankDetails.bankName ? `<tr style="border-bottom:1px solid #f3f4f6;"><td style="padding:10px 16px;font-size:13px;color:#6b7280;width:40%;">Bank</td><td style="padding:10px 16px;font-size:13px;color:#111827;">${user.bankDetails.bankName}</td></tr>` : ""}
