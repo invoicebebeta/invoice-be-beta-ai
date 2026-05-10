@@ -72,6 +72,7 @@ router.post('/auth/signin', async (req, res) => {
     currency: user.currency ?? undefined,
     bankDetails: user.bank_details ? JSON.parse(user.bank_details) : undefined,
     invoiceColor: user.invoice_color ?? undefined,
+    hasLogo: !!user.logo_data,
   } });
 });
 

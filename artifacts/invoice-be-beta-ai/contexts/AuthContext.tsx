@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import { storage } from '../utils/storage';
 import { BankDetails, User } from '../utils/types';
-import { apiSignIn, apiSignUp, apiUpdateLogo, apiUpdateProfile } from '../utils/authApi';
+import { apiSignIn, apiSignUp, apiUpdateLogo, apiUpdateProfile, getApiBaseUrl } from '../utils/authApi';
 import { registerPushToken } from '../utils/pushNotifications';
 
 type AuthContextType = {
@@ -64,10 +64,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       currency: serverUser.currency ?? 'USD',
       bankDetails: serverUser.bankDetails,
       invoiceColor: serverUser.invoiceColor,
+      logoUri: serverUser.hasLogo ? `${getApiBaseUrl()}/api/logo/${serverUser.id}` : undefined,
     };
     await storage.set(CURRENT_KEY, merged);
     setUser(merged);
-    if (merged.logoUri) apiUpdateLogo(merged.id, merged.logoUri);
     if (Platform.OS !== 'web') registerPushToken(merged.id).catch(() => {});
     return { ok: true };
   };

@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
-function getApiBaseUrl(): string {
+export function getApiBaseUrl(): string {
   const envUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
   if (envUrl) return envUrl.replace(/\/$/, '');
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -13,7 +13,7 @@ function getApiBaseUrl(): string {
   return 'http://localhost:8080';
 }
 
-export type AuthUser = { id: string; email: string; businessName: string; vatNumber?: string; businessAddress?: string; currency?: string; bankDetails?: { accountHolderName: string; sortCode: string; accountNumber: string; bankName?: string; reference?: string }; invoiceColor?: string };
+export type AuthUser = { id: string; email: string; businessName: string; vatNumber?: string; businessAddress?: string; currency?: string; bankDetails?: { accountHolderName: string; sortCode: string; accountNumber: string; bankName?: string; reference?: string }; invoiceColor?: string; hasLogo?: boolean };
 
 async function post(path: string, body: Record<string, string>): Promise<{ ok?: boolean; user?: AuthUser; error?: string }> {
   try {
