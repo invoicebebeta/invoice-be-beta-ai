@@ -7,6 +7,7 @@ import {
   createUser,
   updateUserPassword,
   updateUserLogo,
+  updateUserProfile,
   createResetToken,
   findResetToken,
   markResetTokenUsed,
@@ -62,7 +63,7 @@ router.post('/auth/signin', async (req, res) => {
   if (!match) return res.status(401).json({ error: 'Invalid email or password' });
 
   logger.info({ id: user.id, email }, 'User signed in');
-  res.json({ ok: true, user: { id: user.id, email: user.email, businessName: user.business_name } });
+  res.json({ ok: true, user: { id: user.id, email: user.email, businessName: user.business_name, vatNumber: user.vat_number ?? undefined, businessAddress: user.business_address ?? undefined } });
 });
 
 router.put('/auth/logo', async (req, res) => {
@@ -70,6 +71,14 @@ router.put('/auth/logo', async (req, res) => {
   if (!userId) return res.status(400).json({ error: 'userId is required' });
   await updateUserLogo(userId, logoData ?? null);
   logger.info({ userId }, 'Logo updated');
+  res.json({ ok: true });
+});
+
+router.put('/auth/profile', async (req, res) => {
+  const { userId, vatNumber, businessAddress } = req.body ?? {};
+  if (!userId) return res.status(400).json({ error: 'userId is required' });
+  await updateUserProfile(userId, vatNumber ?? null, businessAddress ?? null);
+  logger.info({ userId }, 'Profile updated');
   res.json({ ok: true });
 });
 

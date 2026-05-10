@@ -27,6 +27,12 @@ export async function ensureUsersTable(): Promise<void> {
     await client.query(`
       ALTER TABLE app_users ADD COLUMN IF NOT EXISTS logo_data TEXT
     `);
+    await client.query(`
+      ALTER TABLE app_users ADD COLUMN IF NOT EXISTS vat_number TEXT
+    `);
+    await client.query(`
+      ALTER TABLE app_users ADD COLUMN IF NOT EXISTS business_address TEXT
+    `);
   } finally {
     client.release();
   }
@@ -82,7 +88,7 @@ export async function getPushTokensByUserId(userId: string): Promise<string[]> {
   return r.rows.map((row: { token: string }) => row.token);
 }
 
-export type AppUser = { id: string; email: string; password_hash: string; business_name: string; logo_data: string | null };
+export type AppUser = { id: string; email: string; password_hash: string; business_name: string; logo_data: string | null; vat_number: string | null; business_address: string | null };
 
 export async function findUserByEmail(email: string): Promise<AppUser | null> {
   const r = await getPool().query('SELECT * FROM app_users WHERE LOWER(email) = LOWER($1)', [email]);
@@ -92,6 +98,13 @@ export async function findUserByEmail(email: string): Promise<AppUser | null> {
 export async function findUserById(id: string): Promise<AppUser | null> {
   const r = await getPool().query('SELECT * FROM app_users WHERE id = $1', [id]);
   return r.rows[0] ?? null;
+}
+
+export async function updateUserProfile(userId: string, vatNumber: string | null, businessAddress: string | null): Promise<void> {
+  await getPool().query(
+    'UPDATE app_users SET vat_number = $1, business_address = $2 WHERE id = $3',
+    [vatNumber, businessAddress, userId]
+  );
 }
 
 export async function createUser(id: string, email: string, passwordHash: string, businessName: string): Promise<void> {

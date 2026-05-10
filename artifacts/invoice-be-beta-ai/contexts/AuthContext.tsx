@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import { storage } from '../utils/storage';
 import { BankDetails, User } from '../utils/types';
-import { apiSignIn, apiSignUp, apiUpdateLogo } from '../utils/authApi';
+import { apiSignIn, apiSignUp, apiUpdateLogo, apiUpdateProfile } from '../utils/authApi';
 import { registerPushToken } from '../utils/pushNotifications';
 
 type AuthContextType = {
@@ -59,6 +59,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       currency: 'USD',
       ...(existing?.id === result.user.id ? existing : {}),
       ...result.user,
+      vatNumber: result.user.vatNumber ?? (existing?.id === result.user.id ? existing?.vatNumber : undefined),
+      businessAddress: result.user.businessAddress ?? (existing?.id === result.user.id ? existing?.businessAddress : undefined),
     };
     await storage.set(CURRENT_KEY, merged);
     setUser(merged);
@@ -110,12 +112,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateVatNumber = async (vat: string) => {
     if (!user) return;
-    await persistUser({ ...user, vatNumber: vat });
+    const updated = { ...user, vatNumber: vat };
+    await persistUser(updated);
+    apiUpdateProfile(user.id, vat || null, user.businessAddress ?? null).catch(() => {});
   };
 
   const updateBusinessAddress = async (address: string) => {
     if (!user) return;
-    await persistUser({ ...user, businessAddress: address });
+    const updated = { ...user, businessAddress: address };
+    await persistUser(updated);
+    apiUpdateProfile(user.id, user.vatNumber ?? null, address || null).catch(() => {});
   };
 
   return (

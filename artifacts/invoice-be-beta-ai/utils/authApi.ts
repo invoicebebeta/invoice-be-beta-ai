@@ -13,7 +13,7 @@ function getApiBaseUrl(): string {
   return 'http://localhost:8080';
 }
 
-export type AuthUser = { id: string; email: string; businessName: string };
+export type AuthUser = { id: string; email: string; businessName: string; vatNumber?: string; businessAddress?: string };
 
 async function post(path: string, body: Record<string, string>): Promise<{ ok?: boolean; user?: AuthUser; error?: string }> {
   try {
@@ -46,6 +46,18 @@ export async function apiUpdateLogo(userId: string, logoData: string | null): Pr
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId, logoData }),
+    });
+  } catch {
+    // non-blocking — local storage is the source of truth for the app
+  }
+}
+
+export async function apiUpdateProfile(userId: string, vatNumber: string | null, businessAddress: string | null): Promise<void> {
+  try {
+    await fetch(`${getApiBaseUrl()}/api/auth/profile`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, vatNumber, businessAddress }),
     });
   } catch {
     // non-blocking — local storage is the source of truth for the app
