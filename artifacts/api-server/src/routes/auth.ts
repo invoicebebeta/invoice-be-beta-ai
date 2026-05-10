@@ -63,7 +63,16 @@ router.post('/auth/signin', async (req, res) => {
   if (!match) return res.status(401).json({ error: 'Invalid email or password' });
 
   logger.info({ id: user.id, email }, 'User signed in');
-  res.json({ ok: true, user: { id: user.id, email: user.email, businessName: user.business_name, vatNumber: user.vat_number ?? undefined, businessAddress: user.business_address ?? undefined } });
+  res.json({ ok: true, user: {
+    id: user.id,
+    email: user.email,
+    businessName: user.business_name,
+    vatNumber: user.vat_number ?? undefined,
+    businessAddress: user.business_address ?? undefined,
+    currency: user.currency ?? undefined,
+    bankDetails: user.bank_details ? JSON.parse(user.bank_details) : undefined,
+    invoiceColor: user.invoice_color ?? undefined,
+  } });
 });
 
 router.put('/auth/logo', async (req, res) => {
@@ -75,9 +84,16 @@ router.put('/auth/logo', async (req, res) => {
 });
 
 router.put('/auth/profile', async (req, res) => {
-  const { userId, vatNumber, businessAddress } = req.body ?? {};
+  const { userId, businessName, vatNumber, businessAddress, currency, bankDetails, invoiceColor } = req.body ?? {};
   if (!userId) return res.status(400).json({ error: 'userId is required' });
-  await updateUserProfile(userId, vatNumber ?? null, businessAddress ?? null);
+  await updateUserProfile(userId, {
+    businessName: businessName ?? undefined,
+    vatNumber: vatNumber ?? null,
+    businessAddress: businessAddress ?? null,
+    currency: currency ?? null,
+    bankDetails: bankDetails !== undefined ? JSON.stringify(bankDetails) : undefined,
+    invoiceColor: invoiceColor ?? null,
+  });
   logger.info({ userId }, 'Profile updated');
   res.json({ ok: true });
 });

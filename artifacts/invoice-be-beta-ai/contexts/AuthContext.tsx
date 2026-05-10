@@ -54,13 +54,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!email || !password) return { ok: false, error: 'Email and password are required' };
     const result = await apiSignIn(email.trim(), password);
     if (!result.ok || !result.user) return { ok: false, error: result.error ?? 'Invalid email or password' };
-    const existing = await storage.get<User>(CURRENT_KEY);
+    const serverUser = result.user;
     const merged: User = {
-      currency: 'USD',
-      ...(existing?.id === result.user.id ? existing : {}),
-      ...result.user,
-      vatNumber: result.user.vatNumber ?? (existing?.id === result.user.id ? existing?.vatNumber : undefined),
-      businessAddress: result.user.businessAddress ?? (existing?.id === result.user.id ? existing?.businessAddress : undefined),
+      id: serverUser.id,
+      email: serverUser.email,
+      businessName: serverUser.businessName,
+      vatNumber: serverUser.vatNumber,
+      businessAddress: serverUser.businessAddress,
+      currency: serverUser.currency ?? 'USD',
+      bankDetails: serverUser.bankDetails,
+      invoiceColor: serverUser.invoiceColor,
     };
     await storage.set(CURRENT_KEY, merged);
     setUser(merged);
@@ -79,14 +82,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await storage.set(CURRENT_KEY, updated);
   };
 
+  const syncProfile = (updated: User) => {
+    apiUpdateProfile(updated.id, {
+      businessName: updated.businessName,
+      vatNumber: updated.vatNumber ?? null,
+      businessAddress: updated.businessAddress ?? null,
+      currency: updated.currency ?? null,
+      bankDetails: updated.bankDetails ?? null,
+      invoiceColor: updated.invoiceColor ?? null,
+    }).catch(() => {});
+  };
+
   const updateBusinessName = async (name: string) => {
     if (!user) return;
-    await persistUser({ ...user, businessName: name });
+    const updated = { ...user, businessName: name };
+    await persistUser(updated);
+    syncProfile(updated);
   };
 
   const updateCurrency = async (currency: string) => {
     if (!user) return;
-    await persistUser({ ...user, currency });
+    const updated = { ...user, currency };
+    await persistUser(updated);
+    syncProfile(updated);
   };
 
   const updateLogo = async (logoUri: string | null) => {
@@ -97,7 +115,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateBankDetails = async (details: BankDetails | null) => {
     if (!user) return;
-    await persistUser({ ...user, bankDetails: details ?? undefined });
+    const updated = { ...user, bankDetails: details ?? undefined };
+    await persistUser(updated);
+    syncProfile(updated);
   };
 
   const updateStripeAccount = async (accountId: string | null) => {
@@ -107,21 +127,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateInvoiceColor = async (color: string) => {
     if (!user) return;
-    await persistUser({ ...user, invoiceColor: color });
+    const updated = { ...user, invoiceColor: color };
+    await persistUser(updated);
+    syncProfile(updated);
   };
 
   const updateVatNumber = async (vat: string) => {
     if (!user) return;
     const updated = { ...user, vatNumber: vat };
     await persistUser(updated);
-    apiUpdateProfile(user.id, vat || null, user.businessAddress ?? null).catch(() => {});
+    syncProfile(updated);
   };
 
   const updateBusinessAddress = async (address: string) => {
     if (!user) return;
     const updated = { ...user, businessAddress: address };
     await persistUser(updated);
-    apiUpdateProfile(user.id, user.vatNumber ?? null, address || null).catch(() => {});
+    syncProfile(updated);
   };
 
   return (

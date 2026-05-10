@@ -33,6 +33,15 @@ export async function ensureUsersTable(): Promise<void> {
     await client.query(`
       ALTER TABLE app_users ADD COLUMN IF NOT EXISTS business_address TEXT
     `);
+    await client.query(`
+      ALTER TABLE app_users ADD COLUMN IF NOT EXISTS currency TEXT
+    `);
+    await client.query(`
+      ALTER TABLE app_users ADD COLUMN IF NOT EXISTS bank_details TEXT
+    `);
+    await client.query(`
+      ALTER TABLE app_users ADD COLUMN IF NOT EXISTS invoice_color TEXT
+    `);
   } finally {
     client.release();
   }
@@ -88,7 +97,7 @@ export async function getPushTokensByUserId(userId: string): Promise<string[]> {
   return r.rows.map((row: { token: string }) => row.token);
 }
 
-export type AppUser = { id: string; email: string; password_hash: string; business_name: string; logo_data: string | null; vat_number: string | null; business_address: string | null };
+export type AppUser = { id: string; email: string; password_hash: string; business_name: string; logo_data: string | null; vat_number: string | null; business_address: string | null; currency: string | null; bank_details: string | null; invoice_color: string | null };
 
 export async function findUserByEmail(email: string): Promise<AppUser | null> {
   const r = await getPool().query('SELECT * FROM app_users WHERE LOWER(email) = LOWER($1)', [email]);
@@ -100,11 +109,29 @@ export async function findUserById(id: string): Promise<AppUser | null> {
   return r.rows[0] ?? null;
 }
 
-export async function updateUserProfile(userId: string, vatNumber: string | null, businessAddress: string | null): Promise<void> {
-  await getPool().query(
-    'UPDATE app_users SET vat_number = $1, business_address = $2 WHERE id = $3',
-    [vatNumber, businessAddress, userId]
-  );
+export async function updateUserProfile(
+  userId: string,
+  fields: {
+    businessName?: string;
+    vatNumber?: string | null;
+    businessAddress?: string | null;
+    currency?: string | null;
+    bankDetails?: string | null;
+    invoiceColor?: string | null;
+  }
+): Promise<void> {
+  const sets: string[] = [];
+  const values: unknown[] = [];
+  let i = 1;
+  if (fields.businessName !== undefined) { sets.push(`business_name = $${i++}`); values.push(fields.businessName); }
+  if (fields.vatNumber !== undefined) { sets.push(`vat_number = $${i++}`); values.push(fields.vatNumber); }
+  if (fields.businessAddress !== undefined) { sets.push(`business_address = $${i++}`); values.push(fields.businessAddress); }
+  if (fields.currency !== undefined) { sets.push(`currency = $${i++}`); values.push(fields.currency); }
+  if (fields.bankDetails !== undefined) { sets.push(`bank_details = $${i++}`); values.push(fields.bankDetails); }
+  if (fields.invoiceColor !== undefined) { sets.push(`invoice_color = $${i++}`); values.push(fields.invoiceColor); }
+  if (sets.length === 0) return;
+  values.push(userId);
+  await getPool().query(`UPDATE app_users SET ${sets.join(', ')} WHERE id = $${i}`, values);
 }
 
 export async function createUser(id: string, email: string, passwordHash: string, businessName: string): Promise<void> {
