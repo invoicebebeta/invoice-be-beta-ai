@@ -21,7 +21,10 @@
       "autoIncrement": true,
       "env": {
         "PNPM_FLAGS": "--no-frozen-lockfile",
-        "EXPO_PUBLIC_API_BASE_URL": "https://invoicebebeta.replit.app"
+        "EXPO_PUBLIC_API_BASE_URL": "https://invoicebebeta.replit.app",
+        "EXPO_PUBLIC_REVENUECAT_IOS_API_KEY": "appl_xBmOqbbmIcPWhiHBqwSNYdjFior",
+        "EXPO_PUBLIC_REVENUECAT_TEST_API_KEY": "test_jWDguiatkkHyyYCgdFvQqDYdvhy",
+        "EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY": "appl_xBmOqbbmIcPWhiHBqwSNYdjFior"
       },
       "ios": {
         "simulator": false,
