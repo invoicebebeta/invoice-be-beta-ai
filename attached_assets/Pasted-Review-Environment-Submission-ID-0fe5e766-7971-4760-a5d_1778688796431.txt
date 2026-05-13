@@ -1,0 +1,105 @@
+Review Environment
+
+Submission ID: 0fe5e766-7971-4760-a5d6-23fd47f6777c
+Review date: May 13, 2026
+Review Device: iPad Air 11-inch (M3)
+Version reviewed: 1.0 (16)
+
+Guideline 2.3.10 - Performance - Accurate Metadata
+
+Issue Description
+
+The app or metadata includes information about third-party platforms that may not be relevant for App Store users, who are focused on experiences offered by the app itself.
+
+Next Steps
+
+Revise the app's binary to remove Google Play references.
+
+Revised screenshots should accurately reflect the app in use on the supported devices and highlight the app's main features in the majority of the screenshots. Note some screenshots may only be viewed and updated by selecting "View All Sizes in Media Manager" in the Previews and Screenshots section of App Store Connect.
+
+Reply to App Review in App Store Connect with additional information if the app's functionality and how it interacts with third-party platforms has been misunderstood.
+
+Resources
+
+Learn how to edit App Store metadata on App Store Connect Help.
+Guideline 3.1.2(c) - Business - Payments - Subscriptions
+
+Issue Description
+
+The submission did not include all the required information for apps offering auto-renewable subscriptions.
+
+The following information needs to be included within the app: a functional link to the Terms of Use (EULA) and a functional link to the privacy policy.
+
+You can use SubscriptionStoreView to easily include all of the required information in the app's purchase flow.
+
+The following information needs to be included in the App Store metadata: a functional link to the Terms of Use (EULA) (if you are using the standard Apple Terms of Use (EULA), include a link in the App Description, and if you are using a custom EULA, add it in App Store Connect).
+
+Next Steps
+
+Update the app and App Store metadata to include the information specified above.
+
+Once the app and metadata includes all of the required information, or if they already do, reply to this message with a screen recording to confirm. Include this information in the Notes field of the App Review Information section in App Store Connect for future submissions.
+
+Resources
+
+Apps offering auto-renewable subscriptions must include all of the following required information in the app itself:
+
+- Title of auto-renewing subscription (this may be the same as the In-App Purchase product name)
+- Length of subscription
+- Price of subscription, and price per unit if appropriate
+- Functional links to the privacy policy and Terms of Use (EULA)
+
+The app metadata must also include functional links to the privacy policy in the Privacy Policy field in App Store Connect and the Terms of Use (EULA) in the App Description or EULA field in App Store Connect.
+
+Review Schedule 2 of the Apple Developer Program License Agreement to learn more.
+Guideline 2.1(b) - Performance - App Completeness
+
+
+Issue Description
+
+The In-App Purchase products in the app exhibited one or more bugs which create a poor user experience. Specifically, error message displayed when we tried to subscribe. Review the details and resources below to troubleshoot this issue.
+
+Review device details:
+
+- Device type: iPad Air 11-inch (M3)
+- OS version: iPadOS 26.4.2
+
+Next Steps
+
+Apple reviews In-App Purchase products in the sandbox and the In-App Purchase products do not need prior approval to function in review. Review the product configurations, complete any missing information, and test them in the sandbox.
+
+To offer In-App Purchases in the app, the Account Holder must also accept the Paid Apps Agreement in the Business section of App Store Connect. Confirm you have a Paid Apps Agreement in effect.
+
+If you still need assistance after completing the steps and reviewing the resources, visit the Apple Developer Forums. If you can’t find an answer from an existing thread, start a new thread with your question to get guidance from Apple engineers and other developers.
+
+Resources
+
+Learn more about app completeness requirements in guideline 2.1(b).
+Guideline 5.1.1(v) - Data Collection and Storage
+
+
+Issue Description
+
+The app supports account creation but does not include an option to initiate account deletion. Apps that support account creation must also offer account deletion to give users more control of the data they've shared while using an app.
+
+Follow these requirements when updating an app to support account deletion:
+
+- Only offering to temporarily deactivate or disable an account is insufficient.
+- If users need to visit a website to finish deleting their account, include a link directly to the website page where they can complete the process.
+- Apps may include confirmation steps to prevent users from accidentally deleting their account. However, only apps in highly-regulated industries may require users to use customer service resources, such as making a phone call or sending an email, to complete account deletion.
+
+Next Steps
+
+Update the app to support account deletion. Once account deletion has been added, or if it is already in place, reply to this message with a screen recording captured on a physical device that demonstrates:
+
+- Creating a new account or signing in with the demo account
+- Navigating to the account deletion option
+- The complete account deletion flow from initiation to confirmation
+
+Include the recording in the Notes field of the App Review Information section in App Store Connect for future submissions.
+
+If the app is unable to offer account deletion or needs to provide additional customer service flows to facilitate and confirm account deletion, either because the app operates in a highly-regulated industry or for some other reason, reply to App Review in App Store Connect and provide additional information or documentation. For questions regarding legal obligations, check with legal counsel.
+
+Resources
+
+Review frequently asked questions and learn more about the account deletion requirements.

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import {
   ActivityIndicator,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -26,6 +27,7 @@ export default function PaywallScreen() {
   const [selectedPkg, setSelectedPkg] = useState<PurchasePackage | null>(null);
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [restoreResult, setRestoreResult] = useState<"success" | "none" | null>(null);
+  const [purchaseError, setPurchaseError] = useState<string | null>(null);
 
   const currentOffering = offerings?.current;
   const monthlyPkg = currentOffering?.availablePackages.find(
@@ -43,11 +45,15 @@ export default function PaywallScreen() {
   const handleConfirmPurchase = async () => {
     if (!selectedPkg) return;
     setConfirmVisible(false);
+    setPurchaseError(null);
     try {
       await purchase(selectedPkg);
       router.back();
-    } catch {
-      // User cancelled or purchase failed — stay on screen
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (!msg.toLowerCase().includes("cancel")) {
+        setPurchaseError("Purchase could not be completed. Please try again.");
+      }
     }
   };
 
@@ -236,9 +242,27 @@ export default function PaywallScreen() {
           </View>
         )}
 
+        {purchaseError && (
+          <View style={[styles.restoreResult, { backgroundColor: "#fee2e2", borderRadius: colors.radius, marginBottom: 8 }]}>
+            <Feather name="alert-circle" size={15} color="#dc2626" />
+            <Text style={[styles.restoreResultText, { color: "#dc2626" }]}>{purchaseError}</Text>
+          </View>
+        )}
+
+        {/* Legal links */}
+        <View style={styles.legalLinks}>
+          <Pressable onPress={() => Linking.openURL("https://www.invoicebebeta.com/privacy-policy")}>
+            <Text style={[styles.legalLink, { color: colors.primary }]}>Privacy Policy</Text>
+          </Pressable>
+          <Text style={[styles.legalSep, { color: colors.mutedForeground }]}>·</Text>
+          <Pressable onPress={() => Linking.openURL("https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")}>
+            <Text style={[styles.legalLink, { color: colors.primary }]}>Terms of Use</Text>
+          </Pressable>
+        </View>
+
         {/* Legal */}
         <Text style={[styles.legal, { color: colors.mutedForeground }]}>
-          Payment charged to your App Store or Google Play account. Subscription automatically renews unless cancelled at least 24 hours before the end of the current period.
+          Payment charged to your Apple ID account. Subscription automatically renews unless cancelled at least 24 hours before the end of the current period. Manage or cancel in Settings &gt; Apple ID &gt; Subscriptions.
         </Text>
       </ScrollView>
 
@@ -349,12 +373,22 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   restoreResultText: { fontFamily: "Inter_500Medium", fontSize: 13 },
+  legalLinks: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  legalLink: { fontFamily: "Inter_500Medium", fontSize: 12 },
+  legalSep: { fontFamily: "Inter_400Regular", fontSize: 12 },
   legal: {
     fontFamily: "Inter_400Regular",
     fontSize: 11,
     lineHeight: 16,
     textAlign: "center",
-    marginTop: 8,
+    marginTop: 4,
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,

@@ -52,6 +52,19 @@ export async function apiUpdateLogo(userId: string, logoData: string | null): Pr
   }
 }
 
+export async function apiDeleteAccount(userId: string): Promise<{ ok?: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${getApiBaseUrl()}/api/auth/account`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId }),
+    });
+    return await res.json();
+  } catch {
+    return { error: 'Could not connect to server. Please check your connection.' };
+  }
+}
+
 export async function apiUpdateProfile(userId: string, fields: {
   businessName?: string;
   vatNumber?: string | null;

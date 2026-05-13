@@ -11,6 +11,7 @@ import {
   createResetToken,
   findResetToken,
   markResetTokenUsed,
+  deleteUserById,
 } from '../connectDb';
 import { sendPasswordResetEmail } from '../emailService';
 import { logger } from '../lib/logger';
@@ -240,6 +241,14 @@ router.post('/auth/reset/:token', async (req, res) => {
   const user = await findUserById(record.user_id);
   logger.info({ userId: record.user_id }, 'Password reset successfully');
   res.json({ ok: true, email: user?.email });
+});
+
+router.delete('/auth/account', async (req, res) => {
+  const { userId } = req.body ?? {};
+  if (!userId) return res.status(400).json({ error: 'userId is required' });
+  await deleteUserById(userId);
+  logger.info({ userId }, 'Account deleted');
+  res.json({ ok: true });
 });
 
 export default router;

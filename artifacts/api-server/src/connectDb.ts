@@ -99,6 +99,17 @@ export async function getPushTokensByUserId(userId: string): Promise<string[]> {
 
 export type AppUser = { id: string; email: string; password_hash: string; business_name: string; logo_data: string | null; vat_number: string | null; business_address: string | null; currency: string | null; bank_details: string | null; invoice_color: string | null };
 
+export async function deleteUserById(id: string): Promise<void> {
+  const client = await getPool().connect();
+  try {
+    await client.query('DELETE FROM push_tokens WHERE user_id = $1', [id]);
+    await client.query('DELETE FROM password_reset_tokens WHERE user_id = $1', [id]);
+    await client.query('DELETE FROM app_users WHERE id = $1', [id]);
+  } finally {
+    client.release();
+  }
+}
+
 export async function findUserByEmail(email: string): Promise<AppUser | null> {
   const r = await getPool().query('SELECT * FROM app_users WHERE LOWER(email) = LOWER($1)', [email]);
   return r.rows[0] ?? null;

@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import { storage } from '../utils/storage';
 import { BankDetails, User } from '../utils/types';
-import { apiSignIn, apiSignUp, apiUpdateLogo, apiUpdateProfile, getApiBaseUrl } from '../utils/authApi';
+import { apiSignIn, apiSignUp, apiUpdateLogo, apiUpdateProfile, apiDeleteAccount, getApiBaseUrl } from '../utils/authApi';
 import { registerPushToken } from '../utils/pushNotifications';
 
 type AuthContextType = {
@@ -10,6 +10,7 @@ type AuthContextType = {
   signIn: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   signUp: (email: string, password: string, businessName: string) => Promise<{ ok: boolean; error?: string }>;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<{ ok: boolean; error?: string }>;
   updateBusinessName: (name: string) => Promise<void>;
   updateCurrency: (currency: string) => Promise<void>;
   updateLogo: (logoUri: string | null) => Promise<void>;
@@ -75,6 +76,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     await storage.remove(CURRENT_KEY);
     setUser(null);
+  };
+
+  const deleteAccount = async (): Promise<{ ok: boolean; error?: string }> => {
+    if (!user) return { ok: false, error: 'Not signed in' };
+    const result = await apiDeleteAccount(user.id);
+    if (!result.ok) return { ok: false, error: result.error ?? 'Failed to delete account' };
+    await storage.remove(CURRENT_KEY);
+    setUser(null);
+    return { ok: true };
   };
 
   const persistUser = async (updated: User) => {
@@ -149,7 +159,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider
       value={{
-        user, signIn, signUp, signOut,
+        user, signIn, signUp, signOut, deleteAccount,
         updateBusinessName, updateCurrency, updateLogo,
         updateBankDetails, updateStripeAccount, updateInvoiceColor,
         updateVatNumber, updateBusinessAddress,

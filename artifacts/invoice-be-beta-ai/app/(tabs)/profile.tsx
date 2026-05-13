@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Alert, Linking, Platform, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Alert, Linking, Platform, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -33,11 +33,12 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const {
-    user, signOut,
+    user, signOut, deleteAccount,
     updateBusinessName, updateCurrency, updateLogo,
     updateBankDetails, updateStripeAccount, updateInvoiceColor,
     updateVatNumber, updateBusinessAddress,
   } = useAuth();
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const { reviews, averageRating, refreshReviews } = useReviews();
   const { invoices, monthlyInvoiceCount } = useInvoices();
   const { customers } = useCustomers();
@@ -63,6 +64,28 @@ export default function ProfileScreen() {
     setVatNumber(user?.vatNumber ?? "");
     setBusinessAddress(user?.businessAddress ?? "");
   }, [user?.vatNumber, user?.businessAddress]);
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Delete Account",
+      "Are you sure you want to permanently delete your account? All your data will be removed and this cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete Account",
+          style: "destructive",
+          onPress: async () => {
+            setDeletingAccount(true);
+            const result = await deleteAccount();
+            setDeletingAccount(false);
+            if (!result.ok) {
+              Alert.alert("Error", result.error ?? "Failed to delete account. Please try again.");
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const onSave = async () => {
     if (!name.trim()) return;
@@ -569,6 +592,26 @@ export default function ProfileScreen() {
         <View style={{ marginTop: 8 }}>
           <SecondaryButton title="Sign out" onPress={signOut} icon="log-out" />
         </View>
+
+        <View style={{ marginTop: 8 }}>
+          <Pressable
+            onPress={handleDeleteAccount}
+            disabled={deletingAccount}
+            style={({ pressed }) => [
+              styles.deleteBtn,
+              { borderColor: "#dc2626", borderRadius: colors.radius, opacity: pressed || deletingAccount ? 0.6 : 1 },
+            ]}
+          >
+            {deletingAccount ? (
+              <ActivityIndicator size="small" color="#dc2626" />
+            ) : (
+              <>
+                <Feather name="trash-2" size={16} color="#dc2626" />
+                <Text style={styles.deleteBtnText}>Delete Account</Text>
+              </>
+            )}
+          </Pressable>
+        </View>
       </View>
     </ScrollView>
   );
@@ -625,4 +668,13 @@ const styles = StyleSheet.create({
   navRow: { flexDirection: "row", alignItems: "center", padding: 14, borderWidth: 1, marginBottom: 8, gap: 12 },
   navIcon: { width: 34, height: 34, borderRadius: 8, alignItems: "center", justifyContent: "center" },
   navLabel: { flex: 1, fontFamily: "Inter_500Medium", fontSize: 14 },
+  deleteBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 13,
+    borderWidth: 1,
+  },
+  deleteBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#dc2626" },
 });
