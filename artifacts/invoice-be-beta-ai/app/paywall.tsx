@@ -286,7 +286,7 @@ export default function PaywallScreen() {
               {selectedPkg.identifier === "$rc_monthly" ? " / month" : " / year"}
             </Text>
             <Text style={[styles.confirmDesc, { color: colors.mutedForeground }]}>
-              You'll be billed through the App Store or Google Play. Cancel anytime.
+              You'll be billed through the App Store. Cancel anytime.
             </Text>
             <View style={styles.confirmBtns}>
               <Pressable
