@@ -17,7 +17,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.invoicebebeta.app",
-      "buildNumber": "10",
+      "buildNumber": "17",
       "infoPlist": {
         "NSCameraUsageDescription": "Used to take a photo for your business logo.",
         "NSPhotoLibraryUsageDescription": "Used to choose a photo for your business logo.",
