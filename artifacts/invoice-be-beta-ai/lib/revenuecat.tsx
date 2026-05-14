@@ -4,41 +4,39 @@ import Purchases from "react-native-purchases";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import Constants from "expo-constants";
 
-const REVENUECAT_TEST_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY;
 const REVENUECAT_IOS_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY;
 const REVENUECAT_ANDROID_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY;
+const REVENUECAT_EXPO_GO_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_EXPO_GO_API_KEY;
 
 export const REVENUECAT_ENTITLEMENT_IDENTIFIER = "pro";
 
 function getRevenueCatApiKey(): string {
-  if (!REVENUECAT_TEST_API_KEY || !REVENUECAT_IOS_API_KEY || !REVENUECAT_ANDROID_API_KEY) {
-    throw new Error("RevenueCat Public API Keys not found");
-  }
-
-  if (!REVENUECAT_ENTITLEMENT_IDENTIFIER) {
-    throw new Error("RevenueCat Entitlement Identifier not provided");
-  }
-
   if (__DEV__ || Platform.OS === "web" || Constants.executionEnvironment === "storeClient") {
-    return REVENUECAT_TEST_API_KEY;
+    if (!REVENUECAT_EXPO_GO_API_KEY) throw new Error("RevenueCat Expo Go API Key not found");
+    return REVENUECAT_EXPO_GO_API_KEY;
   }
 
   if (Platform.OS === "ios") {
+    if (!REVENUECAT_IOS_API_KEY) throw new Error("RevenueCat iOS API Key not found");
     return REVENUECAT_IOS_API_KEY;
   }
 
   if (Platform.OS === "android") {
+    if (!REVENUECAT_ANDROID_API_KEY) throw new Error("RevenueCat Android API Key not found");
     return REVENUECAT_ANDROID_API_KEY;
   }
 
-  return REVENUECAT_TEST_API_KEY;
+  if (!REVENUECAT_IOS_API_KEY) throw new Error("RevenueCat API Key not found");
+  return REVENUECAT_IOS_API_KEY;
 }
 
 export function initializeRevenueCat() {
   const apiKey = getRevenueCatApiKey();
   if (!apiKey) throw new Error("RevenueCat Public API Key not found");
 
-  Purchases.setLogLevel(Purchases.LOG_LEVEL.DEBUG);
+  if (__DEV__) {
+    Purchases.setLogLevel(Purchases.LOG_LEVEL.WARN);
+  }
   Purchases.configure({ apiKey });
 }
 
