@@ -101,7 +101,7 @@ export default function OnboardingScreen() {
           <Feather name="zap" size={18} color={colors.primaryForeground} />
         </View>
         <Text style={[styles.title, { color: colors.foreground }]}>
-          {totalDone === 0 ? "Welcome to Invoice Be Beta" : "Almost set up"}
+          {totalDone === 0 ? "Welcome to Invoice Be AI" : "Almost set up"}
         </Text>
         <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
           {subtitle}
